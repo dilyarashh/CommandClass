@@ -15,4 +15,21 @@ public class UserRepository(AppDbContext db) : IUserRepository
         db.Users.Add(user);
         await db.SaveChangesAsync();
     }
+    
+    public async Task<User?> GetByIdAsync(Guid id)
+    {
+        return await db.Users.FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public async Task UpdateAsync(User user)
+    {
+        db.Users.Update(user);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(User user)
+    {
+        db.Users.Remove(user);
+        await db.SaveChangesAsync();
+    }
 }

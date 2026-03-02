@@ -6,4 +6,7 @@ namespace PotteryClass.Services;
 public interface IUserService
 {
     Task<User> CreateUserAsync(RegistrationRequest dto);
+    Task<UserDto> GetCurrentUserAsync();
+    Task<UserDto> UpdateProfileAsync(UpdateProfileRequest dto);
+    Task DeleteCurrentUserAsync();
 }
