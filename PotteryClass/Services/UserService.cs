@@ -4,17 +4,21 @@ using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
 using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
+using PotteryClass.Infrastructure.Auth;
+using PotteryClass.Infrastructure.Errors.Exceptions;
 using ValidationException = PotteryClass.Infrastructure.Errors.Exceptions.ValidationException;
 
 namespace PotteryClass.Services;
 
 public class UserService(
     IUserRepository userRepository,
-    IValidator<RegistrationRequest> userValidator)
+    IValidator<RegistrationRequest> userValidator,
+    ICurrentUser currentUser)
     : IUserService
 {
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IValidator<RegistrationRequest> _userValidator = userValidator;
+    private readonly ICurrentUser _currentUser = currentUser;
 
     public async Task<User> CreateUserAsync(RegistrationRequest dto)
     {
@@ -48,5 +52,75 @@ public class UserService(
         await _userRepository.AddAsync(user);
 
         return user;
+    }
+    
+    public async Task<UserDto> GetCurrentUserAsync()
+    {
+        var userId = _currentUser.GetUserId();
+
+        var user = await _userRepository.GetByIdAsync(userId)
+                   ?? throw new NotFoundException("Пользователь не найден");
+
+        var userDto = new UserDto
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            MiddleName = user.MiddleName,
+            Email = user.Email,
+            Role = user.Role,
+        };
+
+        return userDto;
+    }
+    
+    public async Task<UserDto> UpdateProfileAsync(UpdateProfileRequest dto)
+    {
+        var userId = _currentUser.GetUserId();
+
+        var user = await _userRepository.GetByIdAsync(userId)
+                   ?? throw new NotFoundException("Пользователь не найден");
+
+        if (dto.FirstName is not null)
+            user.FirstName = dto.FirstName;
+
+        if (dto.LastName is not null)
+            user.LastName = dto.LastName;
+
+        if (dto.MiddleName is not null)
+            user.MiddleName = dto.MiddleName;
+
+        if (dto.Email is not null)
+            user.Email = dto.Email;
+
+        if (!string.IsNullOrWhiteSpace(dto.Password))
+        {
+            var passwordHasher = new PasswordHasher<User>();
+            user.PasswordHash = passwordHasher.HashPassword(user, dto.Password);
+        }
+
+        await _userRepository.UpdateAsync(user);
+        
+        var userDto = new UserDto
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            MiddleName = user.MiddleName,
+            Email = user.Email,
+            Role = user.Role,
+        };
+        
+        return userDto;
+    }
+    
+    public async Task DeleteCurrentUserAsync()
+    {
+        var userId = _currentUser.GetUserId();
+
+        var user = await _userRepository.GetByIdAsync(userId)
+                   ?? throw new NotFoundException("Пользователь не найден");
+
+        await _userRepository.DeleteAsync(user);
     }
 }
