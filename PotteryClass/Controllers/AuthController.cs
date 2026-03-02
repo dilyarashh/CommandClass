@@ -37,6 +37,7 @@ public class AuthController(AppDbContext db, AuthService authService) : Controll
 
     [HttpPost("logout")]
     [Authorize]
+    [ProducesResponseType(204)]
     public async Task<IActionResult> Logout()
     {
         var token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
