@@ -4,6 +4,11 @@
         <name>PotteryClass</name>
     </assembly>
     <members>
+        <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
+            <summary>
+            Зарегистрироваться
+            </summary>
+        </member>
         <member name="T:PotteryClass.Migrations.AddUsers">
             <inheritdoc />
         </member>
@@ -38,6 +43,18 @@
             <inheritdoc />
         </member>
         <member name="M:PotteryClass.Migrations.ChangeUser.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PotteryClass.Migrations.AddCreatedAtUser">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCreatedAtUser.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCreatedAtUser.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCreatedAtUser.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
     </members>

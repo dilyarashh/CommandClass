@@ -6,8 +6,11 @@ using FluentValidation;
 using Microsoft.OpenApi.Models;
 using Polly;
 using PotteryClass.Data;
+using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Infrastructure.Errors.Exceptions;
+using PotteryClass.Infrastructure.Validators;
+using PotteryClass.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +25,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()!;
 builder.Services.AddSingleton(jwtSettings);
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateUserValidator>();
 
 builder.Services.AddSwaggerGen(options =>
 {
