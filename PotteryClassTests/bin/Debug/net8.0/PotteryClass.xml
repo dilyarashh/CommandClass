@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PotteryClass</name>
+    </assembly>
+    <members>
+        <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
+            <summary>
+            Зарегистрироваться
+            </summary>
+        </member>
+        <member name="T:PotteryClass.Migrations.AddUsers">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddUsers.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddUsers.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddUsers.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PotteryClass.Migrations.AddBlackToken">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddBlackToken.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddBlackToken.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddBlackToken.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PotteryClass.Migrations.ChangeUser">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.ChangeUser.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.ChangeUser.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.ChangeUser.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PotteryClass.Migrations.AddCreatedAtUser">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCreatedAtUser.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCreatedAtUser.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCreatedAtUser.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>
