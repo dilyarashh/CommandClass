@@ -9,4 +9,6 @@ public interface IUserService
     Task<UserDto> GetCurrentUserAsync();
     Task<UserDto> UpdateProfileAsync(UpdateProfileRequest dto);
     Task DeleteCurrentUserAsync();
+    Task<UserDto> GetByIdAsync(Guid id);
+    Task<PagedResult<UserDto>> GetAllAsync(UsersQuery query);
 }

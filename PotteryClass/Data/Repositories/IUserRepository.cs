@@ -1,3 +1,4 @@
+using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
 
 namespace PotteryClass.Data.Repositories;
@@ -9,4 +10,5 @@ public interface IUserRepository
     Task AddAsync(User user);
     Task UpdateAsync(User user);
     Task DeleteAsync(User user);
+    Task<PagedResult<User>> GetAllAsync(UsersQuery query);
 }
