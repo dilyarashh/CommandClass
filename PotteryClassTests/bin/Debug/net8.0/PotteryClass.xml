@@ -9,6 +9,31 @@
             Зарегистрироваться
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.UsersController.GetMe">
+            <summary>
+            Получить информацию о себе
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.UsersController.UpdateMe(PotteryClass.Data.DTOs.UpdateProfileRequest)">
+            <summary>
+            Редактировать профиль
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.UsersController.DeleteMe">
+            <summary>
+            Удалить профиль
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.UsersController.GetById(System.Guid)">
+            <summary>
+            Получить пользователя по айди
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.UsersController.GetAll(PotteryClass.Data.DTOs.UsersQuery)">
+            <summary>
+            Получить пользователей
+            </summary>
+        </member>
         <member name="T:PotteryClass.Migrations.AddUsers">
             <inheritdoc />
         </member>

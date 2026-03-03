@@ -61,17 +61,7 @@ public class UserService(
         var user = await _userRepository.GetByIdAsync(userId)
                    ?? throw new NotFoundException("Пользователь не найден");
 
-        var userDto = new UserDto
-        {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            MiddleName = user.MiddleName,
-            Email = user.Email,
-            Role = user.Role,
-        };
-
-        return userDto;
+        return Map(user);
     }
     
     public async Task<UserDto> UpdateProfileAsync(UpdateProfileRequest dto)
@@ -101,17 +91,7 @@ public class UserService(
 
         await _userRepository.UpdateAsync(user);
         
-        var userDto = new UserDto
-        {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            MiddleName = user.MiddleName,
-            Email = user.Email,
-            Role = user.Role,
-        };
-        
-        return userDto;
+        return Map(user);
     }
     
     public async Task DeleteCurrentUserAsync()
@@ -123,4 +103,33 @@ public class UserService(
 
         await _userRepository.DeleteAsync(user);
     }
+    
+    public async Task<UserDto> GetByIdAsync(Guid id)
+    {
+        var user = await _userRepository.GetByIdAsync(id)
+                   ?? throw new NotFoundException("Пользователь не найден");
+
+        return Map(user);
+    }
+
+    public async Task<PagedResult<UserDto>> GetAllAsync(UsersQuery query)
+    {
+        var result = await _userRepository.GetAllAsync(query);
+
+        return new PagedResult<UserDto>
+        {
+            TotalCount = result.TotalCount,
+            Items = result.Items.Select(Map).ToList()
+        };
+    }
+
+    private static UserDto Map(User user) => new()
+    {
+        Id = user.Id,
+        FirstName = user.FirstName,
+        LastName = user.LastName,
+        MiddleName = user.MiddleName,
+        Email = user.Email,
+        Role = user.Role
+    };
 }

@@ -21,6 +21,9 @@ public class UsersController(IUserService service) : ControllerBase
         return Ok(user.Id);
     }
     
+    /// <summary>
+    /// Получить информацию о себе
+    /// </summary>
     [Authorize]
     [HttpGet("me")]
     [ProducesResponseType(typeof(UserDto), 200)]
@@ -30,6 +33,9 @@ public class UsersController(IUserService service) : ControllerBase
         return Ok(user);
     }
     
+    /// <summary>
+    /// Редактировать профиль
+    /// </summary>
     [Authorize]
     [HttpPatch("me")]
     [ProducesResponseType(typeof(UserDto), 200)]
@@ -39,6 +45,9 @@ public class UsersController(IUserService service) : ControllerBase
         return Ok(user);
     }
     
+    /// <summary>
+    /// Удалить профиль
+    /// </summary>
     [Authorize]
     [HttpDelete("me")]
     [ProducesResponseType(204)]
@@ -46,5 +55,30 @@ public class UsersController(IUserService service) : ControllerBase
     {
         await service.DeleteCurrentUserAsync();
         return NoContent();
+    }
+    
+    /// <summary>
+    /// Получить пользователя по айди
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(UserDto), 200)]
+    public async Task<ActionResult<UserDto>> GetById(Guid id)
+    {
+        var user = await service.GetByIdAsync(id);
+        return Ok(user);
+    }
+    
+    /// <summary>
+    /// Получить пользователей
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<UserDto>), 200)]
+    public async Task<ActionResult<PagedResult<UserDto>>> GetAll(
+        [FromQuery] UsersQuery query)
+    {
+        var users = await service.GetAllAsync(query);
+        return Ok(users);
     }
 }

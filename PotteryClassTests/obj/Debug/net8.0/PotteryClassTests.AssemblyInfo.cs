@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PotteryClassTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+20e06ceb50e26e6d17c5b6568d7106916cd2e874")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3efdd66635258dc6386a5bdfa02c484bdfbbf9dc")]
 [assembly: System.Reflection.AssemblyProductAttribute("PotteryClassTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PotteryClassTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
