@@ -42,4 +42,15 @@ public class CoursesController(ICourseService service) : ControllerBase
         var result = await service.GetMyCoursesAsync();
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить информацию о курсе по айди
+    /// </summary>
+    [HttpGet("{courseId:guid}")]
+    public async Task<ActionResult<CourseDto>> GetCourseById(Guid courseId)
+    {
+        var result = await service.GetCourseByIdAsync(courseId);
+
+        return Ok(result);
+    }
 }

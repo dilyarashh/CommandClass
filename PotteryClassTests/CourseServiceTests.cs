@@ -427,6 +427,9 @@ public class CourseServiceTests
         var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
 
         var courseId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
 
         repo.Setup(x => x.GetByIdAsync(courseId))
             .ReturnsAsync((Course?)null);
@@ -444,6 +447,7 @@ public class CourseServiceTests
         await act.Should().ThrowAsync<NotFoundException>();
 
         repo.VerifyAll();
+        currentUser.VerifyAll();
     }
 
     [Fact]
