@@ -157,4 +157,9 @@ public class CourseService(
             IsActive = course.IsActive
         };
     }
+
+    public async Task<List<MyCourseDto>> GetMyCoursesAsync()
+    {
+        throw new NotFoundException("Курсов не найдено");
+    }
 }

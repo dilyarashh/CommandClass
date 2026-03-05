@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using Moq;
+using FluentValidation;
 using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
 using PotteryClass.Data.Entities.Enums;
@@ -339,6 +340,79 @@ public class CourseServiceTests
         saved!.CourseId.Should().Be(courseId);
         saved.UserId.Should().Be(userId);
         saved.IsBlocked.Should().BeFalse();
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+
+
+    [Fact]
+    public async Task GetMyCourses_ReturnsCoursesFromRepository()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        var courses = new List<Course>
+    {
+        new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Гончарка",
+            Code = "abcd1234",
+            Teachers = new List<CourseTeacher>(),
+            Students = new List<CourseStudent>()
+        }
+    };
+
+        repo.Setup(x => x.GetUserCoursesAsync(userId))
+            .ReturnsAsync(courses);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var result = await service.GetMyCoursesAsync();
+
+        result.Should().HaveCount(1);
+        result[0].Name.Should().Be("Гончарка");
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetMyCourses_WhenUserHasNoCourses_ReturnsEmptyList()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        repo.Setup(x => x.GetUserCoursesAsync(userId))
+            .ReturnsAsync(new List<Course>());
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var result = await service.GetMyCoursesAsync();
+
+        result.Should().BeEmpty();
 
         repo.VerifyAll();
         currentUser.VerifyAll();
