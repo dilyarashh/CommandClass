@@ -91,6 +91,70 @@ public class CourseService(
 
     public async Task<CourseDto> JoinCourseAsync(JoinCourseRequest dto)
     {
-        throw new NotImplementedException();
+        var validationResult = await joinValidator.ValidateAsync(dto);
+
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray());
+
+            throw new ValidationException(errors);
+        }
+
+        var userId = currentUser.GetUserId();
+
+        var course = await repo.GetByCodeAsync(dto.Code.Trim());
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        if (!course.IsActive)
+        {
+            throw new BadRequestException("Курс архивирован");
+        }
+
+        var link = await repo.GetStudentLinkAsync(course.Id, userId);
+
+        if (link != null)
+        {
+            if (link.IsBlocked)
+            {
+                throw new ForbiddenException("Вы заблокированы на курсе");
+            }
+
+            return new CourseDto
+            {
+                Id = course.Id,
+                Name = course.Name,
+                Description = course.Description,
+                Code = course.Code,
+                IsActive = course.IsActive
+            };
+        }
+
+        var student = new CourseStudent
+        {
+            CourseId = course.Id,
+            UserId = userId,
+            CreatedAtUtc = DateTime.UtcNow,
+            IsBlocked = false
+        };
+
+        await repo.AddStudentAsync(student);
+        await repo.SaveChangesAsync();
+
+        return new CourseDto
+        {
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            Code = course.Code,
+            IsActive = course.IsActive
+        };
     }
 }

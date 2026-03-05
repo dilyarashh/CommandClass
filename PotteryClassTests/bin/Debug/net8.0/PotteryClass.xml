@@ -9,6 +9,11 @@
             Создать курс (только Admin)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.Join(PotteryClass.Data.DTOs.JoinCourseRequest)">
+            <summary>
+            Присоединиться к курсу
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
