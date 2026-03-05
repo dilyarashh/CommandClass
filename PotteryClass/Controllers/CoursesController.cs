@@ -20,4 +20,16 @@ public class CoursesController(ICourseService service) : ControllerBase
         var course = await service.CreateCourseAsync(dto);
         return Ok(course);
     }
+
+    /// <summary>
+    /// Присоединиться к курсу
+    /// </summary>
+    [Authorize]
+    [HttpPost("join")]
+    [ProducesResponseType(typeof(CourseDto), 200)]
+    public async Task<ActionResult<CourseDto>> Join([FromBody] JoinCourseRequest dto)
+    {
+        var course = await service.JoinCourseAsync(dto);
+        return Ok(course);
+    }
 }

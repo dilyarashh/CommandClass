@@ -76,8 +76,6 @@ public class CourseServiceTests
         var currentUser = new Mock<ICurrentUser>();
         var codeGen = new Mock<ICourseCodeGenerator>();
 
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
-
         var createValidator = new CreateCourseValidator();
         var joinValidator = new JoinCourseValidator();
 
@@ -152,7 +150,6 @@ public class CourseServiceTests
         var codeGen = new Mock<ICourseCodeGenerator>();
 
         currentUser.Setup(x => x.GetUserId()).Returns(Guid.NewGuid());
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
         var validator = new CreateCourseValidator();
         var joinValidator = new JoinCourseValidator();
@@ -173,7 +170,6 @@ public class CourseServiceTests
 
         var userId = Guid.NewGuid();
         currentUser.Setup(x => x.GetUserId()).Returns(userId);
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
         repo.Setup(x => x.GetByCodeAsync("4xdqpxlk")).ReturnsAsync((Course?)null);
 
@@ -199,7 +195,6 @@ public class CourseServiceTests
 
         var userId = Guid.NewGuid();
         currentUser.Setup(x => x.GetUserId()).Returns(userId);
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
         var course = new Course
         {
@@ -235,7 +230,6 @@ public class CourseServiceTests
         var courseId = Guid.NewGuid();
 
         currentUser.Setup(x => x.GetUserId()).Returns(userId);
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
         var course = new Course
         {
@@ -276,7 +270,6 @@ public class CourseServiceTests
         var courseId = Guid.NewGuid();
 
         currentUser.Setup(x => x.GetUserId()).Returns(userId);
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
         var course = new Course
         {
@@ -314,7 +307,6 @@ public class CourseServiceTests
         var courseId = Guid.NewGuid();
 
         currentUser.Setup(x => x.GetUserId()).Returns(userId);
-        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
         var course = new Course
         {
