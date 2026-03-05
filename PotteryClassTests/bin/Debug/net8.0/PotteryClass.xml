@@ -4,6 +4,11 @@
         <name>PotteryClass</name>
     </assembly>
     <members>
+        <member name="M:PotteryClass.Controllers.CoursesController.Create(PotteryClass.Data.DTOs.CreateCourseRequest)">
+            <summary>
+            Создать курс (только Admin)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
@@ -80,6 +85,18 @@
             <inheritdoc />
         </member>
         <member name="M:PotteryClass.Migrations.AddCreatedAtUser.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PotteryClass.Migrations.AddCourses">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCourses.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCourses.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddCourses.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
     </members>

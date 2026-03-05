@@ -37,9 +37,10 @@ public class CourseServiceTests
 
         repo.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);
 
-        var validator = new CreateCourseValidator();
+        var createValidator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
 
-        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator);
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, createValidator, joinValidator);
 
         var request = new CreateCourseRequest
         {
@@ -77,9 +78,10 @@ public class CourseServiceTests
 
         currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
 
-        var validator = new CreateCourseValidator();
+        var createValidator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
 
-        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator);
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, createValidator, joinValidator);
 
         var act = () => service.CreateCourseAsync(new CreateCourseRequest { Name = "Курс" });
 
@@ -106,8 +108,10 @@ public class CourseServiceTests
         repo.Setup(x => x.AddAsync(It.IsAny<Course>())).Returns(Task.CompletedTask);
         repo.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);
 
-        var validator = new CreateCourseValidator();
-        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator);
+        var createValidator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, createValidator, joinValidator);
 
         var dto = await service.CreateCourseAsync(new CreateCourseRequest { Name = "Курс" });
 
@@ -127,12 +131,224 @@ public class CourseServiceTests
 
         currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
 
-        var validator = new CreateCourseValidator();
+        var createValidator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
 
-        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator);
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, createValidator, joinValidator);
 
         var act = () => service.CreateCourseAsync(new CreateCourseRequest { Name = "   " });
 
         await act.Should().ThrowAsync<ValidationException>();
+    }
+
+
+
+
+    [Fact]
+    public async Task JoinCourse_EmptyCode_ThrowsValidationException()
+    {
+        var repo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+        var codeGen = new Mock<ICourseCodeGenerator>();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(Guid.NewGuid());
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var validator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator, joinValidator);
+
+        var act = () => service.JoinCourseAsync(new JoinCourseRequest { Code = "   " });
+
+        await act.Should().ThrowAsync<ValidationException>();
+    }
+
+    [Fact]
+    public async Task JoinCourse_CourseNotFound_ThrowsNotFound()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+        var codeGen = new Mock<ICourseCodeGenerator>();
+
+        var userId = Guid.NewGuid();
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        repo.Setup(x => x.GetByCodeAsync("4xdqpxlk")).ReturnsAsync((Course?)null);
+
+        var validator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator, joinValidator);
+
+        var act = () => service.JoinCourseAsync(new JoinCourseRequest { Code = "4xdqpxlk" });
+
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+    [Fact]
+    public async Task JoinCourse_CourseIsArchived_ThrowsBadRequest()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+        var codeGen = new Mock<ICourseCodeGenerator>();
+
+        var userId = Guid.NewGuid();
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var course = new Course
+        {
+            Id = Guid.NewGuid(),
+            Name = "Курс",
+            Code = "4xdqpxlk",
+            IsActive = false
+        };
+
+        repo.Setup(x => x.GetByCodeAsync("4xdqpxlk")).ReturnsAsync(course);
+
+        var validator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator, joinValidator);
+
+        var act = () => service.JoinCourseAsync(new JoinCourseRequest { Code = "4xdqpxlk" });
+
+        await act.Should().ThrowAsync<BadRequestException>();
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+    [Fact]
+    public async Task JoinCourse_WhenAlreadyStudent_ReturnsCourse_AndDoesNotAddLink()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+        var codeGen = new Mock<ICourseCodeGenerator>();
+
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Name = "Курс",
+            Code = "4xdqpxlk",
+            IsActive = true
+        };
+
+        repo.Setup(x => x.GetByCodeAsync("4xdqpxlk")).ReturnsAsync(course);
+        repo.Setup(x => x.GetStudentLinkAsync(courseId, userId))
+            .ReturnsAsync(new CourseStudent { CourseId = courseId, UserId = userId, IsBlocked = false });
+
+        var validator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator, joinValidator);
+
+        var dto = await service.JoinCourseAsync(new JoinCourseRequest { Code = "4xdqpxlk" });
+
+        dto.Id.Should().Be(courseId);
+        dto.Code.Should().Be("4xdqpxlk");
+
+        repo.Verify(x => x.AddStudentAsync(It.IsAny<CourseStudent>()), Times.Never);
+        repo.Verify(x => x.SaveChangesAsync(), Times.Never);
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+    [Fact]
+    public async Task JoinCourse_WhenBlocked_ThrowsForbidden()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+        var codeGen = new Mock<ICourseCodeGenerator>();
+
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Name = "Курс",
+            Code = "4xdqpxlk",
+            IsActive = true
+        };
+
+        repo.Setup(x => x.GetByCodeAsync("4xdqpxlk")).ReturnsAsync(course);
+        repo.Setup(x => x.GetStudentLinkAsync(courseId, userId))
+            .ReturnsAsync(new CourseStudent { CourseId = courseId, UserId = userId, IsBlocked = true });
+
+        var validator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator, joinValidator);
+
+        var act = () => service.JoinCourseAsync(new JoinCourseRequest { Code = "4xdqpxlk" });
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+    [Fact]
+    public async Task JoinCourse_HappyPath_AddsStudentLink()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+        var codeGen = new Mock<ICourseCodeGenerator>();
+
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Name = "Курс",
+            Code = "4xdqpxlk",
+            IsActive = true
+        };
+
+        repo.Setup(x => x.GetByCodeAsync("4xdqpxlk")).ReturnsAsync(course);
+        repo.Setup(x => x.GetStudentLinkAsync(courseId, userId)).ReturnsAsync((CourseStudent?)null);
+
+        CourseStudent? saved = null;
+        repo.Setup(x => x.AddStudentAsync(It.IsAny<CourseStudent>()))
+            .Callback<CourseStudent>(x => saved = x)
+            .Returns(Task.CompletedTask);
+
+        repo.Setup(x => x.SaveChangesAsync()).Returns(Task.CompletedTask);
+
+        var validator = new CreateCourseValidator();
+        var joinValidator = new JoinCourseValidator();
+
+        var service = new CourseService(repo.Object, currentUser.Object, codeGen.Object, validator, joinValidator);
+
+        var dto = await service.JoinCourseAsync(new JoinCourseRequest { Code = "4xdqpxlk" });
+
+        dto.Id.Should().Be(courseId);
+
+        saved.Should().NotBeNull();
+        saved!.CourseId.Should().Be(courseId);
+        saved.UserId.Should().Be(userId);
+        saved.IsBlocked.Should().BeFalse();
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
     }
 }
