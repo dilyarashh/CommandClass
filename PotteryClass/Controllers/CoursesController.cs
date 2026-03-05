@@ -32,4 +32,14 @@ public class CoursesController(ICourseService service) : ControllerBase
         var course = await service.JoinCourseAsync(dto);
         return Ok(course);
     }
+
+    /// <summary>
+    /// Получить список всех курсов пользователя
+    /// </summary>
+    [HttpGet("my")]
+    public async Task<ActionResult<List<MyCourseDto>>> GetMyCourses()
+    {
+        var result = await service.GetMyCoursesAsync();
+        return Ok(result);
+    }
 }
