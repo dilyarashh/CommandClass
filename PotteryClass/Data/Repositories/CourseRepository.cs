@@ -34,4 +34,10 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
             .AsNoTracking()
             .ToListAsync();
     }
+
+    public Task<Course?> GetByIdAsync(Guid courseId)
+    => db.Courses
+        .Include(x => x.Teachers)
+        .Include(x => x.Students)
+        .FirstOrDefaultAsync(x => x.Id == courseId);
 }

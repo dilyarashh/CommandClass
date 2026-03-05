@@ -14,4 +14,6 @@ public interface ICourseRepository
     Task AddStudentAsync(CourseStudent link);
 
     Task<List<Course>> GetUserCoursesAsync(Guid userId);
+
+    Task<Course?> GetByIdAsync(Guid courseId);
 }

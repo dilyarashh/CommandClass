@@ -177,4 +177,9 @@ public class CourseService(
             };
         }).ToList();
     }
+
+    public async Task<CourseDto> GetCourseByIdAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }
