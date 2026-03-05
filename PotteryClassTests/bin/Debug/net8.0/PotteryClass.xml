@@ -14,6 +14,11 @@
             Присоединиться к курсу
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.GetMyCourses">
+            <summary>
+            Получить список всех курсов пользователя
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться

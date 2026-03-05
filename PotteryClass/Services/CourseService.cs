@@ -160,6 +160,21 @@ public class CourseService(
 
     public async Task<List<MyCourseDto>> GetMyCoursesAsync()
     {
-        throw new NotFoundException("Курсов не найдено");
+        var userId = currentUser.GetUserId();
+
+        var courses = await repo.GetUserCoursesAsync(userId);
+
+        return courses.Select(c =>
+        {
+            var isTeacher = c.Teachers.Any(t => t.UserId == userId);
+
+            return new MyCourseDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Code = c.Code,
+                Role = isTeacher ? "Teacher" : "Student"
+            };
+        }).ToList();
     }
 }
