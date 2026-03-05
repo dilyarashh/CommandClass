@@ -180,6 +180,39 @@ public class CourseService(
 
     public async Task<CourseDto> GetCourseByIdAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        var userId = currentUser.GetUserId();
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        var studentLink = course.Students
+            .FirstOrDefault(s => s.UserId == userId);
+
+        var isStudent = studentLink != null;
+
+        if (!isTeacher && !isStudent)
+        {
+            throw new ForbiddenException("Вы не состоите в этом курсе");
+        }
+
+        if (studentLink?.IsBlocked == true)
+        {
+            throw new ForbiddenException("Вы заблокированы на курсе");
+        }
+
+        return new CourseDto
+        {
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            Code = course.Code,
+            IsActive = course.IsActive
+        };
     }
 }

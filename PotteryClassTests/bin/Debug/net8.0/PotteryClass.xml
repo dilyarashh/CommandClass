@@ -19,6 +19,11 @@
             Получить список всех курсов пользователя
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.GetCourseById(System.Guid)">
+            <summary>
+            Получить информацию о курсе по айди
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
