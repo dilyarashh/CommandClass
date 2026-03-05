@@ -13,7 +13,8 @@ public class CourseService(
     ICourseRepository repo,
     ICurrentUser currentUser,
     ICourseCodeGenerator codeGen,
-    IValidator<CreateCourseRequest> validator)
+    IValidator<CreateCourseRequest> validator,
+    IValidator<JoinCourseRequest> joinValidator)
     : ICourseService
 {
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest dto)
@@ -86,5 +87,10 @@ public class CourseService(
             Code = course.Code,
             IsActive = course.IsActive
         };
+    }
+
+    public async Task<CourseDto> JoinCourseAsync(JoinCourseRequest dto)
+    {
+        throw new NotImplementedException();
     }
 }
