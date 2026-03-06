@@ -912,4 +912,212 @@ public class CourseServiceTests
 
         repo.VerifyAll();
     }
+
+
+
+
+    [Fact]
+    public async Task UnblockStudent_WhenCourseNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var teacherId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(teacherId);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync((Course?)null);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.UnblockStudentAsync(courseId, studentId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task UnblockStudent_WhenUserNotTeacher_ThrowsForbidden()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Teachers = new List<CourseTeacher>()
+        };
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.UnblockStudentAsync(courseId, studentId);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task UnblockStudent_WhenStudentNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var teacherId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(teacherId);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Teachers = new List<CourseTeacher>
+        {
+            new() { UserId = teacherId }
+        },
+            Students = new List<CourseStudent>()
+        };
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.UnblockStudentAsync(courseId, studentId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task UnblockStudent_WhenStudentNotBlocked_ThrowsBadRequest()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var teacherId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(teacherId);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Teachers = new List<CourseTeacher>
+        {
+            new() { UserId = teacherId }
+        },
+            Students = new List<CourseStudent>
+        {
+            new()
+            {
+                UserId = studentId,
+                IsBlocked = false
+            }
+        }
+        };
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.UnblockStudentAsync(courseId, studentId);
+
+        await act.Should().ThrowAsync<BadRequestException>();
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task UnblockStudent_WhenValid_UnblocksStudent()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var teacherId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(teacherId);
+
+        var student = new CourseStudent
+        {
+            UserId = studentId,
+            IsBlocked = true
+        };
+
+        var course = new Course
+        {
+            Id = courseId,
+            Teachers = new List<CourseTeacher>
+        {
+            new() { UserId = teacherId }
+        },
+            Students = new List<CourseStudent>
+        {
+            student
+        }
+        };
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        repo.Setup(x => x.SaveChangesAsync())
+            .Returns(Task.CompletedTask);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        await service.UnblockStudentAsync(courseId, studentId);
+
+        student.IsBlocked.Should().BeFalse();
+
+        repo.VerifyAll();
+    }
 }
