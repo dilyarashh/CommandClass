@@ -579,4 +579,129 @@ public class CourseServiceTests
 
         repo.VerifyAll();
     }
+
+
+
+
+    [Fact]
+    public async Task GetCourseStudents_WhenCourseNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync((Course?)null);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var act = () => service.GetCourseStudentsAsync(courseId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetCourseStudents_WhenUserIsTeacher_ReturnsStudents()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+        var teacherId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(teacherId);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Teachers = new List<CourseTeacher>
+        {
+            new() { UserId = teacherId }
+        }
+        };
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        repo.Setup(x => x.GetCourseStudentsAsync(courseId))
+            .ReturnsAsync(new List<User>
+            {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                FirstName = "Ivan",
+                LastName = "Ivanov",
+                Email = "ivan@test.com"
+            }
+            });
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var result = await service.GetCourseStudentsAsync(courseId);
+
+        result.Should().HaveCount(1);
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetCourseStudents_WhenUserIsStudent_ThrowsForbidden()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        var course = new Course
+        {
+            Id = courseId,
+            Teachers = new List<CourseTeacher>(),
+            Students = new List<CourseStudent>
+        {
+            new()
+            {
+                CourseId = courseId,
+                UserId = userId
+            }
+        }
+        };
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var act = () => service.GetCourseStudentsAsync(courseId);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        repo.VerifyAll();
+    }
 }

@@ -8,4 +8,5 @@ public interface ICourseService
     Task<CourseDto> JoinCourseAsync(JoinCourseRequest dto);
     Task<List<MyCourseDto>> GetMyCoursesAsync();
     Task<CourseDto> GetCourseByIdAsync(Guid courseId);
+    Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId);
 }
