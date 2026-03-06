@@ -53,4 +53,14 @@ public class CoursesController(ICourseService service) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить список студентов курса по айди (доступно только преподавателю)
+    /// </summary>
+    [HttpGet("{courseId:guid}/students")]
+    public async Task<ActionResult<List<CourseStudentDto>>> GetStudents(Guid courseId)
+    {
+        var result = await service.GetCourseStudentsAsync(courseId);
+        return Ok(result);
+    }
 }
