@@ -55,7 +55,7 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
-    /// Получить список студентов курса по айди (доступно только преподавателю)
+    /// Получить список студентов курса по айди (только преподаватель)
     /// </summary>
     [HttpGet("{courseId:guid}/students")]
     public async Task<ActionResult<List<CourseStudentDto>>> GetStudents(Guid courseId)
@@ -65,7 +65,7 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
-    /// Заблокировать студента по его айди и айди курса (доступно только преподавателю)
+    /// Заблокировать студента по его айди и айди курса (только преподаватель)
     /// </summary>
     [HttpPatch("{courseId:guid}/students/{studentId:guid}/block")]
     public async Task<IActionResult> BlockStudent(Guid courseId, Guid studentId)
@@ -75,12 +75,23 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
-    /// Раблокировать студента по его айди и айди курса (доступно только преподавателю)
+    /// Раблокировать студента по его айди и айди курса (только преподаватель)
     /// </summary>
     [HttpPatch("{courseId}/students/{studentId}/unblock")]
     public async Task<IActionResult> UnblockStudent(Guid courseId, Guid studentId)
     {
         await service.UnblockStudentAsync(courseId, studentId);
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Назначить нового преподавателя на курс (только Admin)
+    /// </summary>
+    [HttpPost("{courseId}/teachers/{teacherId}")]
+    public async Task<IActionResult> AddTeacher(Guid courseId, Guid teacherId)
+    {
+        await service.AddTeacherAsync(courseId, teacherId);
 
         return NoContent();
     }
