@@ -26,17 +26,22 @@
         </member>
         <member name="M:PotteryClass.Controllers.CoursesController.GetStudents(System.Guid)">
             <summary>
-            Получить список студентов курса по айди (доступно только преподавателю)
+            Получить список студентов курса по айди (только преподаватель)
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.CoursesController.BlockStudent(System.Guid,System.Guid)">
             <summary>
-            Заблокировать студента по его айди и айди курса (доступно только преподавателю)
+            Заблокировать студента по его айди и айди курса (только преподаватель)
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.CoursesController.UnblockStudent(System.Guid,System.Guid)">
             <summary>
-            Раблокировать студента по его айди и айди курса (доступно только преподавателю)
+            Раблокировать студента по его айди и айди курса (только преподаватель)
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.AddTeacher(System.Guid,System.Guid)">
+            <summary>
+            Назначить нового преподавателя на курс (только Admin)
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">

@@ -301,6 +301,32 @@ public class CourseService(
 
     public async Task AddTeacherAsync(Guid courseId, Guid teacherId)
     {
-        throw new NotImplementedException();
+        if (currentUser.GetRole() != UserRole.Admin)
+        {
+            throw new ForbiddenException("Только администратор может назначать преподавателей");
+        }    
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var alreadyTeacher = course.Teachers.Any(t => t.UserId == teacherId);
+
+        if (alreadyTeacher)
+        {
+            throw new BadRequestException("Пользователь уже является преподавателем курса");
+        }
+
+        course.Teachers.Add(new CourseTeacher
+        {
+            CourseId = courseId,
+            UserId = teacherId,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        await repo.SaveChangesAsync();
     }
 }
