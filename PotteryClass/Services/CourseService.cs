@@ -244,4 +244,9 @@ public class CourseService(
             Email = u.Email
         }).ToList();
     }
+
+    public Task BlockStudentAsync(Guid courseId, Guid studentId)
+    {
+        throw new NotImplementedException();
+    }
 }
