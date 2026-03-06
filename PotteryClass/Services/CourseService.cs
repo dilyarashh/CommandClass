@@ -271,4 +271,9 @@ public class CourseService(
 
         await repo.SaveChangesAsync();
     }
+
+    public async Task UnblockStudentAsync(Guid courseId, Guid studentId)
+    {
+        throw new NotImplementedException();
+    }
 }
