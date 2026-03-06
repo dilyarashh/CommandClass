@@ -332,6 +332,37 @@ public class CourseService(
 
     public async Task RemoveTeacherAsync(Guid courseId, Guid teacherId)
     {
-        throw new NotImplementedException();
+        if (currentUser.GetRole() != UserRole.Admin)
+        {
+            throw new ForbiddenException("Только администратор может удалять преподавателей");
+        }
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var teacher = course.Teachers.FirstOrDefault(t => t.UserId == teacherId);
+
+        if (teacher == null)
+        {
+            throw new NotFoundException("Преподаватель не найден на курсе");
+        }
+
+        if (course.CreatedByUserId == teacherId)
+        {
+            throw new BadRequestException("Нельзя удалить создателя курса");
+        }
+
+        if (course.Teachers.Count == 1)
+        {
+            throw new BadRequestException("Нельзя удалить последнего преподавателя курса");
+        }
+
+        course.Teachers.Remove(teacher);
+
+        await repo.SaveChangesAsync();
     }
 }
