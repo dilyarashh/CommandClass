@@ -9,4 +9,5 @@ public interface ICourseService
     Task<List<MyCourseDto>> GetMyCoursesAsync();
     Task<CourseDto> GetCourseByIdAsync(Guid courseId);
     Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId);
+    Task BlockStudentAsync(Guid courseId, Guid studentId);
 }
