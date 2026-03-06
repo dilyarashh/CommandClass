@@ -21,4 +21,6 @@ public interface ICourseService
     Task AddTeacherAsync(Guid courseId, Guid teacherId);
 
     Task RemoveTeacherAsync(Guid courseId, Guid teacherId);
+
+    Task ArchiveCourseAsync(Guid courseId);
 }
