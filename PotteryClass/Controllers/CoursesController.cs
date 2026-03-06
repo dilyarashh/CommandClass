@@ -73,4 +73,15 @@ public class CoursesController(ICourseService service) : ControllerBase
         await service.BlockStudentAsync(courseId, studentId);
         return NoContent();
     }
+
+    /// <summary>
+    /// Раблокировать студента по его айди и айди курса (доступно только преподавателю)
+    /// </summary>
+    [HttpPatch("{courseId}/students/{studentId}/unblock")]
+    public async Task<IActionResult> UnblockStudent(Guid courseId, Guid studentId)
+    {
+        await service.UnblockStudentAsync(courseId, studentId);
+
+        return NoContent();
+    }
 }

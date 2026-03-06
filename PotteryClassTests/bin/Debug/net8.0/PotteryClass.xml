@@ -34,6 +34,11 @@
             Заблокировать студента по его айди и айди курса (доступно только преподавателю)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.UnblockStudent(System.Guid,System.Guid)">
+            <summary>
+            Раблокировать студента по его айди и айди курса (доступно только преподавателю)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться

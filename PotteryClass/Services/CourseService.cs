@@ -274,6 +274,28 @@ public class CourseService(
 
     public async Task UnblockStudentAsync(Guid courseId, Guid studentId)
     {
-        throw new NotImplementedException();
+        var teacherId = currentUser.GetUserId();
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+            throw new NotFoundException("Курс не найден");
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
+
+        if (!isTeacher)
+            throw new ForbiddenException("Только преподаватель курса может разблокировать студентов");
+
+        var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
+
+        if (student == null)
+            throw new NotFoundException("Студент не найден");
+
+        if (!student.IsBlocked)
+            throw new BadRequestException("Студент не заблокирован");
+
+        student.IsBlocked = false;
+
+        await repo.SaveChangesAsync();
     }
 }
