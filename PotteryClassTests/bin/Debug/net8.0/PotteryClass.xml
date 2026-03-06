@@ -24,6 +24,11 @@
             Получить информацию о курсе по айди
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.GetStudents(System.Guid)">
+            <summary>
+            Получить список студентов курса по айди (доступно только преподавателю)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться

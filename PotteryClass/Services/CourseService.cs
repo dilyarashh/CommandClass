@@ -216,8 +216,32 @@ public class CourseService(
         };
     }
 
-    public Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId)
+    public async Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        var userId = currentUser.GetUserId();
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        if (!isTeacher)
+        {
+            throw new ForbiddenException("Только преподаватель может смотреть список студентов");
+        }
+
+        var students = await repo.GetCourseStudentsAsync(courseId);
+
+        return students.Select(u => new CourseStudentDto
+        {
+            Id = u.Id,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
+            Email = u.Email
+        }).ToList();
     }
 }
