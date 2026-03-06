@@ -16,6 +16,8 @@ namespace PotteryClassTests;
 
 public class CourseServiceTests
 {
+    /// Тесты на создание курса
+
     [Fact]
     public async Task CreateCourse_Admin_CreatesCourse_AndAddsCreatorAsTeacher()
     {
@@ -141,7 +143,7 @@ public class CourseServiceTests
     }
 
 
-
+    /// Тесты на получение присоединение к курсу по коду
 
     [Fact]
     public async Task JoinCourse_EmptyCode_ThrowsValidationException()
@@ -346,6 +348,7 @@ public class CourseServiceTests
     }
 
 
+    /// Тесты на получение списка своих курсов
 
     [Fact]
     public async Task GetMyCourses_ReturnsCoursesFromRepository()
@@ -419,6 +422,7 @@ public class CourseServiceTests
     }
 
 
+    /// Тесты на получение информации о курсе по айди
 
     [Fact]
     public async Task GetCourseById_WhenCourseNotExists_ThrowsNotFound()
@@ -581,7 +585,7 @@ public class CourseServiceTests
     }
 
 
-
+    /// Тесты на получение списка учеников курса
 
     [Fact]
     public async Task GetCourseStudents_WhenCourseNotExists_ThrowsNotFound()
@@ -706,7 +710,7 @@ public class CourseServiceTests
     }
 
 
-
+    /// Тесты на блокировку ученика
 
     [Fact]
     public async Task BlockStudent_WhenCourseNotExists_ThrowsNotFound()
@@ -914,7 +918,7 @@ public class CourseServiceTests
     }
 
 
-
+    /// Тесты на разблокировку ранее заблокированного ученика
 
     [Fact]
     public async Task UnblockStudent_WhenCourseNotExists_ThrowsNotFound()
@@ -1122,7 +1126,7 @@ public class CourseServiceTests
     }
 
 
-
+    /// Тесты на назначение пользователя преподавателем
 
     [Fact]
     public async Task AddTeacher_WhenCourseNotExists_ThrowsNotFound()
@@ -1257,7 +1261,7 @@ public class CourseServiceTests
     }
 
 
-
+    /// Тесты на удаление пользователя с роли учителя
 
     [Fact]
     public async Task RemoveTeacher_WhenUserNotAdmin_ThrowsForbidden()
@@ -1419,6 +1423,137 @@ public class CourseServiceTests
         await service.RemoveTeacherAsync(courseId, teacherId);
 
         course.Teachers.Should().NotContain(t => t.UserId == teacherId);
+
+        repo.VerifyAll();
+    }
+
+
+    /// Тесты на архивирование курса
+
+    [Fact]
+    public async Task ArchiveCourse_WhenUserNotAdmin_ThrowsForbidden()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.ArchiveCourseAsync(courseId);
+
+        await act.Should()
+            .ThrowAsync<ForbiddenException>()
+            .WithMessage("Только администратор может архивировать курсы");
+    }
+
+    [Fact]
+    public async Task ArchiveCourse_WhenCourseNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync((Course?)null);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.ArchiveCourseAsync(courseId);
+
+        await act.Should()
+            .ThrowAsync<NotFoundException>()
+            .WithMessage("Курс не найден");
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task ArchiveCourse_WhenAlreadyArchived_ThrowsBadRequest()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+
+        var course = new Course
+        {
+            Id = courseId,
+            IsActive = false
+        };
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.ArchiveCourseAsync(courseId);
+
+        await act.Should()
+            .ThrowAsync<BadRequestException>()
+            .WithMessage("Курс уже архивирован");
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task ArchiveCourse_WhenValid_ArchivesCourse()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+
+        var course = new Course
+        {
+            Id = courseId,
+            IsActive = true
+        };
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        repo.Setup(x => x.SaveChangesAsync())
+            .Returns(Task.CompletedTask);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        await service.ArchiveCourseAsync(courseId);
+
+        course.IsActive.Should().BeFalse();
 
         repo.VerifyAll();
     }

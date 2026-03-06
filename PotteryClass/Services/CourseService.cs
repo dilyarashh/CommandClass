@@ -365,4 +365,9 @@ public class CourseService(
 
         await repo.SaveChangesAsync();
     }
+
+    public async Task ArchiveCourseAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }
