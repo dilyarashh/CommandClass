@@ -215,4 +215,9 @@ public class CourseService(
             IsActive = course.IsActive
         };
     }
+
+    public Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }

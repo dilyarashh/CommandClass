@@ -56,6 +56,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(c => c.Students)
                 .HasForeignKey(x => x.CourseId);
 
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
+
             b.Property(x => x.IsBlocked).IsRequired();
             b.Property(x => x.CreatedAtUtc).IsRequired();
         });
