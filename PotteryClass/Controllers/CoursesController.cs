@@ -106,4 +106,15 @@ public class CoursesController(ICourseService service) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Отправить курс в архив (только Admin)
+    /// </summary>
+    [HttpPost("{courseId:guid}/archive")]
+    public async Task<IActionResult> ArchiveCourse(Guid courseId)
+    {
+        await service.ArchiveCourseAsync(courseId);
+
+        return NoContent();
+    }
 }

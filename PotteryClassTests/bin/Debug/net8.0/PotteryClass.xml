@@ -49,6 +49,11 @@
             Снять пользователя с должности преподавателя курса (только Admin)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.ArchiveCourse(System.Guid)">
+            <summary>
+            Отправить курс в архив (только Admin)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
