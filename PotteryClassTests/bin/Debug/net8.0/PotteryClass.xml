@@ -44,6 +44,11 @@
             Назначить нового преподавателя на курс (только Admin)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.RemoveTeacher(System.Guid,System.Guid)">
+            <summary>
+            Снять пользователя с должности преподавателя курса (только Admin)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться

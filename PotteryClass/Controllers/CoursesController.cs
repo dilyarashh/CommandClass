@@ -95,4 +95,15 @@ public class CoursesController(ICourseService service) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Снять пользователя с должности преподавателя курса (только Admin)
+    /// </summary>
+    [HttpDelete("{courseId}/teachers/{teacherId}")]
+    public async Task<IActionResult> RemoveTeacher(Guid courseId, Guid teacherId)
+    {
+        await service.RemoveTeacherAsync(courseId, teacherId);
+
+        return NoContent();
+    }
 }
