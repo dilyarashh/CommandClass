@@ -63,4 +63,14 @@ public class CoursesController(ICourseService service) : ControllerBase
         var result = await service.GetCourseStudentsAsync(courseId);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Заблокировать студента по его айди и айди курса (доступно только преподавателю)
+    /// </summary>
+    [HttpPatch("{courseId:guid}/students/{studentId:guid}/block")]
+    public async Task<IActionResult> BlockStudent(Guid courseId, Guid studentId)
+    {
+        await service.BlockStudentAsync(courseId, studentId);
+        return NoContent();
+    }
 }
