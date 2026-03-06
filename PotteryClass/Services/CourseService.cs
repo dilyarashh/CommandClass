@@ -245,8 +245,30 @@ public class CourseService(
         }).ToList();
     }
 
-    public Task BlockStudentAsync(Guid courseId, Guid studentId)
+    public async Task BlockStudentAsync(Guid courseId, Guid studentId)
     {
-        throw new NotImplementedException();
+        var teacherId = currentUser.GetUserId();
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+            throw new NotFoundException("Курс не найден");
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
+
+        if (!isTeacher)
+            throw new ForbiddenException("Только преподаватель курса может блокировать студентов");
+
+        var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
+
+        if (student == null)
+            throw new NotFoundException("Студент не найден");
+
+        if (student.IsBlocked)
+            throw new BadRequestException("Студент уже заблокирован");
+
+        student.IsBlocked = true;
+
+        await repo.SaveChangesAsync();
     }
 }
