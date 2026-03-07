@@ -413,4 +413,9 @@ public class CourseService(
 
         await repo.SaveChangesAsync();
     }
+
+    public async Task<List<CourseDto>> GetAllCoursesAsync()
+    {
+        throw new NotImplementedException();
+    }
 }

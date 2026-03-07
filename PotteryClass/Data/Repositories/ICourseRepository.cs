@@ -18,4 +18,6 @@ public interface ICourseRepository
     Task<Course?> GetByIdAsync(Guid courseId);
 
     Task<List<User>> GetCourseStudentsAsync(Guid courseId);
+
+    Task<List<Course>> GetAllAsync();
 }

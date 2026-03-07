@@ -1688,4 +1688,77 @@ public class CourseServiceTests
 
         repo.VerifyAll();
     }
+
+
+    /// Тесты на получение списка всех курсов админом
+
+    [Fact]
+    public async Task GetAllCourses_WhenUserNotAdmin_ThrowsForbidden()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.GetAllCoursesAsync();
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task GetAllCourses_WhenAdmin_ReturnsCourses()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        var courses = new List<Course>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Pottery",
+                Code = "abc123",
+                Description = "Basic pottery",
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Advanced pottery",
+                Code = "def456",
+                Description = null,
+                IsActive = false
+            }
+        };
+
+        repo.Setup(x => x.GetAllAsync())
+            .ReturnsAsync(courses);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var result = await service.GetAllCoursesAsync();
+
+        result.Should().HaveCount(2);
+
+        result[0].Name.Should().Be("Pottery");
+        result[1].IsActive.Should().BeFalse();
+
+        repo.VerifyAll();
+    }
 }

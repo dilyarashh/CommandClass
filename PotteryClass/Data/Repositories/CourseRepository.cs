@@ -46,4 +46,9 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
             .Where(x => x.CourseId == courseId && !x.IsBlocked)
             .Select(x => x.User)
             .ToListAsync();
+
+    public Task<List<Course>> GetAllAsync()
+    => db.Courses
+            .AsNoTracking()
+            .ToListAsync();
 }
