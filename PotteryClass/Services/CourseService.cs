@@ -392,6 +392,25 @@ public class CourseService(
 
     public async Task RestoreCourseAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        if (currentUser.GetRole() != UserRole.Admin)
+        {
+            throw new ForbiddenException("Только администратор может разархивировать курсы");
+        }
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        if (course.IsActive)
+        {
+            throw new BadRequestException("Курс уже активен");
+        }
+
+        course.IsActive = true;
+
+        await repo.SaveChangesAsync();
     }
 }

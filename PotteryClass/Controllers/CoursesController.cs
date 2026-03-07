@@ -117,4 +117,15 @@ public class CoursesController(ICourseService service) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary> 
+    /// Достать курс из архива (только Admin)
+    /// </summary>
+    [HttpPost("{courseId:guid}/restore")]
+    public async Task<IActionResult> RestoreCourse(Guid courseId)
+    {
+        await service.RestoreCourseAsync(courseId);
+
+        return NoContent();
+    }
 }

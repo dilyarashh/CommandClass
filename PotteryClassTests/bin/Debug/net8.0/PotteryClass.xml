@@ -54,6 +54,11 @@
             Отправить курс в архив (только Admin)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.RestoreCourse(System.Guid)">
+            <summary> 
+            Достать курс из архива (только Admin)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
