@@ -416,6 +416,18 @@ public class CourseService(
 
     public async Task<List<CourseDto>> GetAllCoursesAsync()
     {
-        throw new NotImplementedException();
+        if (currentUser.GetRole() != UserRole.Admin)
+            throw new ForbiddenException("Только администратор может смотреть все курсы");
+
+        var courses = await repo.GetAllAsync();
+
+        return courses.Select(c => new CourseDto
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            Code = c.Code,
+            IsActive = c.IsActive
+        }).ToList();
     }
 }

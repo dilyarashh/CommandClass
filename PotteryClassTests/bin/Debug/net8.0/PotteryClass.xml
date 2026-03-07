@@ -16,7 +16,7 @@
         </member>
         <member name="M:PotteryClass.Controllers.CoursesController.GetMyCourses">
             <summary>
-            Получить список всех курсов пользователя
+            Получить список своих курсов
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.CoursesController.GetCourseById(System.Guid)">
@@ -57,6 +57,11 @@
         <member name="M:PotteryClass.Controllers.CoursesController.RestoreCourse(System.Guid)">
             <summary> 
             Достать курс из архива (только Admin)
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.GetAllCourses">
+            <summary>
+            Получить список всех курсов (только Admin)
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
