@@ -433,6 +433,25 @@ public class CourseService(
 
     public async Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto)
     {
-        throw new NotImplementedException();
+        if (currentUser.GetRole() != UserRole.Admin)
+        {
+            throw new ForbiddenException("Только администратор может редактировать курсы");
+        }
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        if (dto.Name != null)
+        {
+            course.Name = dto.Name;
+        }
+
+        course.Description = dto.Description;
+
+        await repo.SaveChangesAsync();
     }
 }

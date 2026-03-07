@@ -139,4 +139,16 @@ public class CoursesController(ICourseService service) : ControllerBase
         var result = await service.GetAllCoursesAsync();
         return Ok(result);
     }
+
+    /// <summary>
+    /// Обновить курс (только Admin)
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{courseId:guid}")]
+    public async Task<IActionResult> UpdateCourse(Guid courseId, [FromBody] UpdateCourseRequest dto)
+    {
+        await service.UpdateCourseAsync(courseId, dto);
+
+        return NoContent();
+    }
 }
