@@ -69,6 +69,11 @@
             Обновить курс (только Admin)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.LeaveCourse(System.Guid)">
+            <summary>
+            Покинуть курс
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться

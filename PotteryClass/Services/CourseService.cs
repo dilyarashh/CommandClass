@@ -457,6 +457,45 @@ public class CourseService(
 
     public async Task LeaveCourseAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        var userId = currentUser.GetUserId();
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        if (course.CreatedByUserId == userId)
+        {
+            throw new BadRequestException("Создатель курса не может покинуть курс");
+        }
+
+        var student = course.Students.FirstOrDefault(x => x.UserId == userId);
+        var teacher = course.Teachers.FirstOrDefault(x => x.UserId == userId);
+
+        if (student == null && teacher == null)
+        {
+            throw new BadRequestException("Пользователь не состоит в курсе");
+        }
+
+        if (student != null)
+        {
+            course.Students.Remove(student);
+            await repo.SaveChangesAsync();
+            return;
+        }
+
+        if (teacher != null)
+        {
+            if (course.Teachers.Count == 1)
+            {
+                throw new BadRequestException("Нельзя покинуть курс — вы единственный преподаватель");
+            }
+
+            course.Teachers.Remove(teacher);
+
+            await repo.SaveChangesAsync();
+        }
     }
 }
