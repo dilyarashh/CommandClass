@@ -430,4 +430,9 @@ public class CourseService(
             IsActive = c.IsActive
         }).ToList();
     }
+
+    public async Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto)
+    {
+        throw new NotImplementedException();
+    }
 }

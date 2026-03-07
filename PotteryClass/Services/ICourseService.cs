@@ -27,4 +27,6 @@ public interface ICourseService
     Task RestoreCourseAsync(Guid courseId);
 
     Task<List<CourseDto>> GetAllCoursesAsync();
+
+    Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto);
 }

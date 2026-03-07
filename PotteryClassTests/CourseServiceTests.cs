@@ -1761,4 +1761,111 @@ public class CourseServiceTests
 
         repo.VerifyAll();
     }
+
+
+    /// Тесты на редактирование курса администратором
+
+    [Fact]
+    public async Task UpdateCourse_WhenUserNotAdmin_ThrowsForbidden()
+    {
+        var repo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.UpdateCourseAsync(courseId, new UpdateCourseRequest
+        {
+            Name = "New name"
+        });
+
+        await act.Should()
+            .ThrowAsync<ForbiddenException>()
+            .WithMessage("Только администратор может редактировать курсы");
+    }
+
+    [Fact]
+    public async Task UpdateCourse_WhenCourseNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync((Course?)null);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        Func<Task> act = () => service.UpdateCourseAsync(courseId, new UpdateCourseRequest
+        {
+            Name = "New name"
+        });
+
+        await act.Should()
+            .ThrowAsync<NotFoundException>()
+            .WithMessage("Курс не найден");
+
+        repo.VerifyAll();
+    }
+
+    [Fact]
+    public async Task UpdateCourse_WhenValid_UpdatesCourse()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var courseId = Guid.NewGuid();
+
+        var course = new Course
+        {
+            Id = courseId,
+            Name = "Old name",
+            Description = "Old desc"
+        };
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        repo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(course);
+
+        repo.Setup(x => x.SaveChangesAsync())
+            .Returns(Task.CompletedTask);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        await service.UpdateCourseAsync(courseId, new UpdateCourseRequest
+        {
+            Name = "New name",
+            Description = "New desc"
+        });
+
+        course.Name.Should().Be("New name");
+        course.Description.Should().Be("New desc");
+
+        repo.VerifyAll();
+    }
 }
