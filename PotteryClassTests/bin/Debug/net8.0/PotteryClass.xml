@@ -64,6 +64,11 @@
             Получить список всех курсов (только Admin)
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CoursesController.UpdateCourse(System.Guid,PotteryClass.Data.DTOs.UpdateCourseRequest)">
+            <summary>
+            Обновить курс (только Admin)
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
