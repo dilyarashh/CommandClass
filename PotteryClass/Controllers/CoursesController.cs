@@ -151,4 +151,16 @@ public class CoursesController(ICourseService service) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Покинуть курс
+    /// </summary>
+    [Authorize]
+    [HttpPost("{courseId:guid}/leave")]
+    public async Task<IActionResult> LeaveCourse(Guid courseId)
+    {
+        await service.LeaveCourseAsync(courseId);
+
+        return NoContent();
+    }
 }
