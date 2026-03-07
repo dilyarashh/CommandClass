@@ -454,4 +454,9 @@ public class CourseService(
 
         await repo.SaveChangesAsync();
     }
+
+    public async Task LeaveCourseAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }
