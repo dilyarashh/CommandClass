@@ -34,7 +34,7 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
-    /// Получить список всех курсов пользователя
+    /// Получить список своих курсов
     /// </summary>
     [HttpGet("my")]
     public async Task<ActionResult<List<MyCourseDto>>> GetMyCourses()
@@ -127,5 +127,16 @@ public class CoursesController(ICourseService service) : ControllerBase
         await service.RestoreCourseAsync(courseId);
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Получить список всех курсов (только Admin)
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    public async Task<ActionResult<List<CourseDto>>> GetAllCourses()
+    {
+        var result = await service.GetAllCoursesAsync();
+        return Ok(result);
     }
 }
