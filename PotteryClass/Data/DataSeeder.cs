@@ -20,6 +20,7 @@ public static class DbSeeder
                 Id = Guid.NewGuid(),
                 FirstName = "System",
                 LastName = "Admin",
+                MiddleName = "Course",
                 Email = "admin@pottery.local",
                 Role = UserRole.Admin
             };
