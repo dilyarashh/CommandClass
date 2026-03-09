@@ -498,4 +498,9 @@ public class CourseService(
             await repo.SaveChangesAsync();
         }
     }
+
+    public async Task<List<CourseTeacherDto>> GetCourseTeachersAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }
