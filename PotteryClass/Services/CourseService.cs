@@ -501,6 +501,32 @@ public class CourseService(
 
     public async Task<List<CourseTeacherDto>> GetCourseTeachersAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        var userId = currentUser.GetUserId();
+
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        var isStudent = course.Students.Any(s => s.UserId == userId);
+
+        if (!isTeacher && !isStudent)
+        {
+            throw new ForbiddenException("Вы не состоите в этом курсе");
+        }
+
+        var teachers = await repo.GetCourseTeachersAsync(courseId);
+
+        return teachers.Select(t => new CourseTeacherDto
+        {
+            Id = t.Id,
+            FirstName = t.FirstName,
+            LastName = t.LastName,
+            Email = t.Email
+        }).ToList();
     }
 }
