@@ -10,7 +10,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CourseTeacher> CourseTeachers => Set<CourseTeacher>();
     public DbSet<CourseStudent> CourseStudents => Set<CourseStudent>();
     public DbSet<BlackToken> BlackTokens { get; set; } = null!;
-
+    public DbSet<Assignment> Assignments { get; set; }
+    public DbSet<AssignmentFile> AssignmentFiles { get; set; }
+    public DbSet<Comment> Comments { get; set; }
+    public DbSet<Submission> Submissions { get; set; }
+    public DbSet<SubmissionFile> SubmissionFiles { get; set; }
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
