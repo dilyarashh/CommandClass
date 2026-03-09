@@ -31,4 +31,6 @@ public interface ICourseService
     Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto);
 
     Task LeaveCourseAsync(Guid courseId);
+
+    Task<List<CourseTeacherDto>> GetCourseTeachersAsync(Guid courseId);
 }

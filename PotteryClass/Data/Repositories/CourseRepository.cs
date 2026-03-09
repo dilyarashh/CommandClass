@@ -51,4 +51,16 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
     => db.Courses
             .AsNoTracking()
             .ToListAsync();
+
+    public async Task<List<User>> GetCourseTeachersAsync(Guid courseId)
+    {
+        return await db.CourseTeachers
+            .Where(x => x.CourseId == courseId)
+            .Join(
+                db.Users,
+                ct => ct.UserId,
+                u => u.Id,
+                (ct, u) => u)
+            .ToListAsync();
+    }
 }
