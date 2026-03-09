@@ -164,5 +164,14 @@
         <member name="M:PotteryClass.Migrations.AddCourses.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:PotteryClass.Migrations.AddAssigments">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddAssigments.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddAssigments.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>
