@@ -35,6 +35,9 @@ builder.Services.AddScoped<ICourseRepository, CourseRepository>();
 builder.Services.AddSingleton<ICourseCodeGenerator, CourseCodeGenerator>();
 builder.Services.AddScoped<ICourseService, CourseService>();
 
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+
 builder.Services.AddSwaggerGen(options =>
 {
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
