@@ -163,4 +163,14 @@ public class CoursesController(ICourseService service) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Получить список преподавателей курса
+    /// </summary>
+    [HttpGet("{courseId:guid}/teachers")]
+    public async Task<ActionResult<List<CourseTeacherDto>>> GetTeachers(Guid courseId)
+    {
+        var result = await service.GetCourseTeachersAsync(courseId);
+        return Ok(result);
+    }
 }
