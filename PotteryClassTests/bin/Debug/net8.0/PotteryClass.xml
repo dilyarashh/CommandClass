@@ -9,6 +9,11 @@
             Создать комментарий к заданию
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CommentsController.GetComments(System.Guid)">
+            <summary>
+            Получить список комментариев задания
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.CoursesController.Create(PotteryClass.Data.DTOs.CreateCourseRequest)">
             <summary>
             Создать курс (только Admin)

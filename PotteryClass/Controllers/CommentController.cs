@@ -21,4 +21,16 @@ public class CommentsController(ICommentService service) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить список комментариев задания
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(List<CommentDto>), 200)]
+    public async Task<ActionResult<List<CommentDto>>> GetComments(Guid assignmentId)
+    {
+        var result = await service.GetCommentsAsync(assignmentId);
+
+        return Ok(result);
+    }
 }
