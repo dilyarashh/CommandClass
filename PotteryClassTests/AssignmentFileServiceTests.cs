@@ -5,9 +5,10 @@ using PotteryClass.Data.Entities;
 using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
-using PotteryClass.Infrastructure.Errors.Exceptions;
 using PotteryClass.Services;
 using Xunit;
+
+namespace PotteryClassTests;
 
 public class AssignmentFileServiceTests
 {
@@ -18,7 +19,7 @@ public class AssignmentFileServiceTests
     private readonly Mock<IFileStorageService> _fileStorage = new();
 
     private AssignmentService CreateService()
-        => new(_assignmentRepo.Object, _teacherRepo.Object, _studentRepo.Object, _currentUser.Object);
+        => new(_assignmentRepo.Object, _teacherRepo.Object, _studentRepo.Object, _currentUser.Object, _fileStorage.Object);
 
     [Fact]
     public async Task AddFileAsync_Should_Add_File_To_Assignment()
