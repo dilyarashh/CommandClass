@@ -16,9 +16,10 @@ public class AssignmentServiceTests
     private readonly Mock<ICurrentUser> _currentUserMock = new();
     private readonly Mock<ICourseStudentRepository> _courseStudentMock = new();
     private readonly Mock<ICourseTeacherRepository> _courseTeacherMock = new();
+    private readonly Mock<IFileStorageService> _storageService = new();
 
     private AssignmentService CreateService()
-        => new(_repoMock.Object, _courseTeacherMock.Object,  _courseStudentMock.Object, _currentUserMock.Object);
+        => new(_repoMock.Object, _courseTeacherMock.Object,  _courseStudentMock.Object, _currentUserMock.Object, _storageService.Object);
 
     [Fact]
     public async Task CreateAsync_Should_Create_Assignment()

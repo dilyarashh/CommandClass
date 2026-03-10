@@ -4,6 +4,36 @@
         <name>PotteryClass</name>
     </assembly>
     <members>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.Create(PotteryClass.Data.DTOs.CreateAssignmentRequest)">
+            <summary>
+            Создать задание
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.Get(System.Guid)">
+            <summary>
+            Получить задание
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.Update(System.Guid,PotteryClass.Data.DTOs.UpdateAssignmentRequest)">
+            <summary>
+            Обновить задание
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.Delete(System.Guid)">
+            <summary>
+            Удалить задание
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.UploadFile(System.Guid,PotteryClass.Data.DTOs.AssignmentFileFormRequest)">
+            <summary>
+            Добавление файла к заданию
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.DeleteFile(System.Guid,System.Guid)">
+            <summary>
+            Удаление файла из задания
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.CommentsController.CreateComment(System.Guid,PotteryClass.Data.DTOs.CreateCommentRequest)">
             <summary>
             Создать комментарий к заданию

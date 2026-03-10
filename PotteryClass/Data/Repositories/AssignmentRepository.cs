@@ -27,4 +27,10 @@ public class AssignmentRepository(AppDbContext db) : IAssignmentRepository
         db.Assignments.Remove(assignment);
         await db.SaveChangesAsync();
     }
+    
+    public async Task AddFileAsync(AssignmentFile file)
+    {
+        db.AssignmentFiles.Add(file);
+        await db.SaveChangesAsync();
+    }
 }

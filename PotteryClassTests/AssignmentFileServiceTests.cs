@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
@@ -32,16 +33,24 @@ public class AssignmentFileServiceTests
 
         _currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
         _currentUser.Setup(x => x.GetUserId()).Returns(Guid.NewGuid());
+        
+        var bytes = new byte[] { 1, 2, 3 };
+        var stream = new MemoryStream(bytes);
 
-        var dto = new AssignmentFileRequest
+        IFormFile file = new FormFile(stream, 0, bytes.Length, "Content", "test.png")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "image/png"
+        };
+
+        var dto = new AssignmentFileFormRequest
         {
             FileName = "test.png",
-            Content = new byte[] { 1, 2, 3 },
-            MimeType = "image/png",
+            Content = file,
             Type = FileType.Image
         };
 
-        _fileStorage.Setup(f => f.UploadFileAsync(dto.Content, dto.FileName, dto.MimeType))
+        _fileStorage.Setup(f => f.UploadFileAsync(bytes, dto.FileName, file.ContentType))
             .ReturnsAsync("https://minio.local/test.png");
 
         var service = CreateService();
@@ -51,7 +60,7 @@ public class AssignmentFileServiceTests
         result.FileName.Should().Be("test.png");
         result.Url.Should().Be("https://minio.local/test.png");
 
-        _assignmentRepo.Verify(r => r.UpdateAsync(assignment), Times.Once);
+        _assignmentRepo.Verify(r => r.AddFileAsync(It.IsAny<AssignmentFile>()), Times.Once);
     }
     
     [Fact]

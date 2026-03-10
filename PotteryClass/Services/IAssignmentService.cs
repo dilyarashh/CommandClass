@@ -8,6 +8,6 @@ public interface IAssignmentService
     Task<AssignmentDto> GetByIdAsync(Guid id);
     Task<AssignmentDto> UpdateAsync(Guid id, UpdateAssignmentRequest dto);
     Task DeleteAsync(Guid id);
-    Task<AssignmentFileRequest> AddFileAsync(Guid assignmentId, AssignmentFileRequest request);
+    Task<AssignmentFileDto> AddFileAsync(Guid assignmentId, AssignmentFileFormRequest request);
     Task DeleteFileAsync(Guid assignmentId, Guid fileId);
 }
