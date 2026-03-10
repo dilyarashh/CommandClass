@@ -9,4 +9,8 @@ public interface ICommentRepository
     Task AddAsync(Comment comment);
 
     Task SaveChangesAsync();
+
+    Task<bool> AssignmentExistsAsync(Guid assignmentId);
+
+    Task<List<Comment>> GetAssignmentCommentsAsync(Guid assignmentId);
 }
