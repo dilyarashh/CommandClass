@@ -122,4 +122,53 @@ public class AssignmentServiceTests
 
         _repoMock.Verify(r => r.DeleteAsync(assignment), Times.Once);
     }
+    
+    [Fact]
+    public async Task GetCourseAssignmentsAsync_Should_Return_Paged_Assignments()
+    {
+        var courseId = Guid.NewGuid();
+        var page = 1;
+        var pageSize = 10;
+
+        _currentUserMock.Setup(x => x.GetRole())
+            .Returns(UserRole.Admin);
+
+        var assignments = new List<Assignment>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                CourseId = courseId,
+                Title = "Assignment 1",
+                Text = "Text 1",
+                RequiresSubmission = true,
+                Created = DateTime.UtcNow
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                CourseId = courseId,
+                Title = "Assignment 2",
+                Text = "Text 2",
+                RequiresSubmission = false,
+                Created = DateTime.UtcNow
+            }
+        };
+
+        _repoMock.Setup(r => r.GetByCourseAsync(courseId, page, pageSize))
+            .ReturnsAsync((assignments, assignments.Count));
+
+        var service = CreateService();
+
+        var result = await service.GetCourseAssignmentsAsync(courseId, page, pageSize);
+
+        result.Items.Should().HaveCount(2);
+        result.Total.Should().Be(2);
+        result.Page.Should().Be(page);
+        result.PageSize.Should().Be(pageSize);
+
+        result.Items[0].Title.Should().Be("Assignment 1");
+
+        _repoMock.Verify(r => r.GetByCourseAsync(courseId, page, pageSize), Times.Once);
+    }
 }
