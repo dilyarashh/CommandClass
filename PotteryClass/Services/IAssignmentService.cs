@@ -5,10 +5,9 @@ namespace PotteryClass.Services;
 public interface IAssignmentService
 {
     Task<AssignmentDto> CreateAsync(CreateAssignmentRequest dto);
-
     Task<AssignmentDto> GetByIdAsync(Guid id);
-
     Task<AssignmentDto> UpdateAsync(Guid id, UpdateAssignmentRequest dto);
-
     Task DeleteAsync(Guid id);
+    Task<AssignmentFileRequest> AddFileAsync(Guid assignmentId, AssignmentFileRequest request);
+    Task DeleteFileAsync(Guid assignmentId, Guid fileId);
 }
