@@ -44,6 +44,23 @@ public class CommentService(ICommentRepository repo, ICurrentUser currentUser) :
 
     public async Task<List<CommentDto>> GetCommentsAsync(Guid assignmentId)
     {
-        throw new NotImplementedException();
+        var assignmentExists = await repo.AssignmentExistsAsync(assignmentId);
+
+        if (!assignmentExists)
+            throw new NotFoundException("Задание не найдено");
+
+        var comments = await repo.GetAssignmentCommentsAsync(assignmentId);
+
+        return comments
+            .Select(x => new CommentDto
+            {
+                Id = x.Id,
+                AssignmentId = x.AssignmentId,
+                Text = x.Text,
+                Created = x.Created,
+                UserId = x.UserId,
+                UserName = $"{x.User.FirstName} {x.User.LastName}"
+            })
+            .ToList();
     }
 }
