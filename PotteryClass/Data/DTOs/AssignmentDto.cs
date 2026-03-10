@@ -15,4 +15,6 @@ public class AssignmentDto
     public DateTime? Deadline { get; set; }
 
     public DateTime Created { get; set; }
+    
+    public List<AssignmentFileDto> Files { get; set; } = new();
 }
