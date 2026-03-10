@@ -87,7 +87,7 @@ public class AssignmentService(
 
         await EnsureCourseMember(assignment.CourseId);
         
-        return Map(assignment);
+        return MapAssignment(assignment);
     }
 
     public async Task<AssignmentDto> UpdateAsync(Guid id, UpdateAssignmentRequest dto)
@@ -138,70 +138,111 @@ public class AssignmentService(
         };
     }
     
-    public async Task<AssignmentFileDto> AddFileAsync(Guid assignmentId, AssignmentFileFormRequest dto)
+    public async Task<List<AssignmentFileDto>> AddFileAsync(Guid assignmentId, AssignmentFilesFormRequest dto)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
                          ?? throw new NotFoundException("Задание не найдено");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
 
-        byte[] content;
-        await using (var ms = new MemoryStream())
+        var result = new List<AssignmentFileDto>();
+
+        foreach (var fileDto in dto.Files)
         {
-            await dto.Content.CopyToAsync(ms);
-            content = ms.ToArray();
+            byte[] content;
+            await using (var ms = new MemoryStream())
+            {
+                await fileDto.File.CopyToAsync(ms);
+                content = ms.ToArray();
+            }
+
+            var url = await _fileStorage.UploadFileAsync(content, fileDto.File.FileName, fileDto.File.ContentType);
+
+            var assignmentFile = new AssignmentFile
+            {
+                Id = Guid.NewGuid(),
+                AssignmentId = assignmentId,
+                FileName = fileDto.File.FileName,
+                Url = url,
+                MimeType = fileDto.File.ContentType,
+                Size = content.LongLength
+            };
+
+            await _assignmentRepository.AddFileAsync(assignmentFile);
+
+            result.Add(new AssignmentFileDto
+            {
+                Id = assignmentFile.Id,
+                FileName = assignmentFile.FileName,
+                Url = assignmentFile.Url,
+                MimeType = assignmentFile.MimeType,
+                Size = assignmentFile.Size
+            });
         }
 
-        var url = await _fileStorage.UploadFileAsync(content, dto.Content.FileName, dto.Content.ContentType);
-
-        var assignmentFile = new AssignmentFile
-        {
-            Id = Guid.NewGuid(),
-            AssignmentId = assignmentId,
-            FileName = dto.Content.FileName,
-            Url = url,
-            MimeType = dto.Content.ContentType,
-            Size = content.LongLength,
-            Type = dto.Type
-        };
-
-        await _assignmentRepository.AddFileAsync(assignmentFile);
-
-        return new AssignmentFileDto
-        {
-            Id = assignmentFile.Id,
-            FileName = assignmentFile.FileName,
-            Url = assignmentFile.Url,
-            MimeType = assignmentFile.MimeType,
-            Size = assignmentFile.Size,
-            Type = assignmentFile.Type
-        };
+        return result;
     }
 
-    public async Task DeleteFileAsync(Guid assignmentId, Guid fileId)
+    public async Task DeleteFileAsync(Guid assignmentId, List<Guid> fileIds)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
                          ?? throw new NotFoundException("Задание не найдено");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
 
-        var file = assignment.Files.FirstOrDefault(f => f.Id == fileId)
-                   ?? throw new NotFoundException("Файл не найден");
+        var files = assignment.Files
+            .Where(f => fileIds.Contains(f.Id))
+            .ToList();
 
-        await _fileStorage.DeleteFileAsync(file.Url);
+        foreach (var file in files)
+        {
+            await _fileStorage.DeleteFileAsync(file.Url);
+            assignment.Files.Remove(file);
+        }
 
-        assignment.Files.Remove(file);
         await _assignmentRepository.UpdateAsync(assignment);
     }
 
-    private static AssignmentDto MapAssigment(Assignment a) => new()
+    public async Task<PagedAssignmentResult<AssignmentDto>> GetCourseAssignmentsAsync(
+        Guid courseId,
+        int page,
+        int pageSize)
     {
-        Id = a.Id,
-        CourseId = a.CourseId,
-        Title = a.Title,
-        Text = a.Text,
-        RequiresSubmission = a.RequiresSubmission,
-        Deadline = a.Deadline,
-        Created = a.Created
-    };
+        await EnsureCourseMember(courseId);
+
+        var (items, total) = await _assignmentRepository.GetByCourseAsync(
+            courseId,
+            page,
+            pageSize);
+
+        return new PagedAssignmentResult<AssignmentDto>
+        {
+            Items = items.Select(MapAssignment).ToList(),
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+    
+    private static AssignmentDto MapAssignment(Assignment assignment)
+    {
+        return new AssignmentDto
+        {
+            Id = assignment.Id,
+            CourseId = assignment.CourseId,
+            Title = assignment.Title,
+            Text = assignment.Text,
+            RequiresSubmission = assignment.RequiresSubmission,
+            Deadline = assignment.Deadline,
+            Created = assignment.Created,
+            Files = assignment.Files.Select(f => new AssignmentFileDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                Url = f.Url,
+                MimeType = f.MimeType,
+                Size = f.Size
+            }).ToList()
+        };
+    }
 }

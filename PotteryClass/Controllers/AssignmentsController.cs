@@ -66,23 +66,42 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     /// </summary>
     [HttpPost("{id}/files")]
     [Authorize]
-    public async Task<ActionResult<AssignmentFileDto>> UploadFile(
+    [RequestSizeLimit(500_000_000)]
+    public async Task<ActionResult<List<AssignmentFileDto>>> UploadFiles(
         Guid id,
-        [FromForm] AssignmentFileFormRequest dto)
+        [FromForm] List<IFormFile> files)
     {
-        var result = await service.AddFileAsync(id, dto);
+        var dtos = files.Select(f => new AssignmentFileFormRequest { File = f }).ToList();
+        var request = new AssignmentFilesFormRequest { Files = dtos };
+        var result = await service.AddFileAsync(id, request);
         return Ok(result);
     }
 
     /// <summary>
     /// Удаление файла из задания
     /// </summary>
+    [HttpDelete("{assignmentId}/files")]
     [Authorize]
-    [HttpDelete("{assignmentId:guid}/files/{fileId:guid}")]
-    [ProducesResponseType(204)]
-    public async Task<IActionResult> DeleteFile(Guid assignmentId, Guid fileId)
+    public async Task<IActionResult> DeleteFiles(
+        Guid assignmentId,
+        [FromBody] List<Guid> fileIds)
     {
-        await service.DeleteFileAsync(assignmentId, fileId);
+        await service.DeleteFileAsync(assignmentId, fileIds);
         return NoContent();
+    }
+    
+    /// <summary>
+    /// Получить задания курса
+    /// </summary>
+    [Authorize]
+    [HttpGet("/api/courses/{courseId}/assignments")]
+    [ProducesResponseType(typeof(PagedResult<AssignmentDto>), 200)]
+    public async Task<ActionResult<PagedResult<AssignmentDto>>> GetCourseAssignments(
+        Guid courseId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var result = await service.GetCourseAssignmentsAsync(courseId, page, pageSize);
+        return Ok(result);
     }
 }

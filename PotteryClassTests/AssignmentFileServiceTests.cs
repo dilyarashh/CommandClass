@@ -43,22 +43,27 @@ public class AssignmentFileServiceTests
             ContentType = "image/png"
         };
 
-        var dto = new AssignmentFileFormRequest
+        var dto = new AssignmentFilesFormRequest
         {
-            FileName = "test.png",
-            Content = file,
-            Type = FileType.Image
+            Files = new List<AssignmentFileFormRequest>
+            {
+                new AssignmentFileFormRequest
+                {
+                    File = file
+                }
+            }
         };
 
-        _fileStorage.Setup(f => f.UploadFileAsync(bytes, dto.FileName, file.ContentType))
+        _fileStorage.Setup(f => f.UploadFileAsync(bytes, file.FileName, file.ContentType))
             .ReturnsAsync("https://minio.local/test.png");
 
         var service = CreateService();
 
         var result = await service.AddFileAsync(assignmentId, dto);
 
-        result.FileName.Should().Be("test.png");
-        result.Url.Should().Be("https://minio.local/test.png");
+        result.Should().HaveCount(1);
+        result[0].FileName.Should().Be("test.png");
+        result[0].Url.Should().Be("https://minio.local/test.png");
 
         _assignmentRepo.Verify(r => r.AddFileAsync(It.IsAny<AssignmentFile>()), Times.Once);
     }
@@ -67,7 +72,7 @@ public class AssignmentFileServiceTests
     public async Task DeleteFileAsync_Should_Remove_File_From_Assignment_And_MinIO()
     {
         var assignmentId = Guid.NewGuid();
-        var fileId = Guid.NewGuid();
+        Guid fileId = Guid.NewGuid();
 
         var file = new AssignmentFile
         {
@@ -89,7 +94,7 @@ public class AssignmentFileServiceTests
 
         var service = CreateService();
 
-        await service.DeleteFileAsync(assignmentId, fileId);
+        await service.DeleteFileAsync(assignmentId, new List<Guid> { fileId });
 
         assignment.Files.Should().BeEmpty();
 
