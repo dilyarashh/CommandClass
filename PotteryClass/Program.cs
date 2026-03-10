@@ -3,9 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Polly;
 using PotteryClass.Data;
+using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Infrastructure.Errors.Exceptions;
@@ -42,6 +44,19 @@ builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<ICourseTeacherRepository, CourseTeacherRepository>();
 builder.Services.AddScoped<ICourseStudentRepository, CourseStudentRepository>();
+
+builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("Minio"));
+
+builder.Services.AddSingleton<IFileStorageService>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<MinioSettings>>().Value;
+
+    return new FileStorageService(
+        settings.Endpoint,
+        settings.AccessKey,
+        settings.SecretKey,
+        settings.Bucket);
+});
 
 builder.Services.AddSwaggerGen(options =>
 {

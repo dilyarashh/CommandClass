@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PotteryClass.Data.DTOs;
+using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Services;
 
 namespace PotteryClass.Controllers;
@@ -57,6 +58,31 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         await service.DeleteAsync(id);
+        return NoContent();
+    }
+    
+    /// <summary>
+    /// Добавление файла к заданию
+    /// </summary>
+    [HttpPost("{id}/files")]
+    [Authorize]
+    public async Task<ActionResult<AssignmentFileDto>> UploadFile(
+        Guid id,
+        [FromForm] AssignmentFileFormRequest dto)
+    {
+        var result = await service.AddFileAsync(id, dto);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Удаление файла из задания
+    /// </summary>
+    [Authorize]
+    [HttpDelete("{assignmentId:guid}/files/{fileId:guid}")]
+    [ProducesResponseType(204)]
+    public async Task<IActionResult> DeleteFile(Guid assignmentId, Guid fileId)
+    {
+        await service.DeleteFileAsync(assignmentId, fileId);
         return NoContent();
     }
 }

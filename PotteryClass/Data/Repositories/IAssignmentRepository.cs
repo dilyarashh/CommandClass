@@ -11,4 +11,5 @@ public interface IAssignmentRepository
     Task UpdateAsync(Assignment assignment);
 
     Task DeleteAsync(Assignment assignment);
+    Task AddFileAsync(AssignmentFile file);
 }
