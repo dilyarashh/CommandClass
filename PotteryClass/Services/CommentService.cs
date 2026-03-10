@@ -41,4 +41,9 @@ public class CommentService(ICommentRepository repo, ICurrentUser currentUser) :
             Created = comment.Created
         };
     }
+
+    public async Task<List<CommentDto>> GetCommentsAsync(Guid assignmentId)
+    {
+        throw new NotImplementedException();
+    }
 }

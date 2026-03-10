@@ -89,4 +89,61 @@ public class CommentServiceTests
         repo.Verify(x => x.AddAsync(It.IsAny<Comment>()), Times.Once);
         repo.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
+
+
+    /// Тесты на получение списка комментариев
+
+    [Fact]
+    public async Task GetComments_WhenAssignmentNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var assignmentId = Guid.NewGuid();
+
+        repo.Setup(x => x.AssignmentExistsAsync(assignmentId))
+            .ReturnsAsync(false);
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        Func<Task> act = () => service.GetCommentsAsync(assignmentId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetComments_WhenAssignmentExists_ReturnsComments()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var assignmentId = Guid.NewGuid();
+
+        repo.Setup(x => x.AssignmentExistsAsync(assignmentId))
+            .ReturnsAsync(true);
+
+        repo.Setup(x => x.GetAssignmentCommentsAsync(assignmentId))
+            .ReturnsAsync(new List<Comment>
+            {
+            new Comment
+            {
+                Id = Guid.NewGuid(),
+                Text = "Test comment",
+                Created = DateTime.UtcNow,
+                User = new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = "John",
+                    LastName = "Doe"
+                }
+            }
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        var result = await service.GetCommentsAsync(assignmentId);
+
+        result.Should().HaveCount(1);
+        result.First().Text.Should().Be("Test comment");
+    }
 }
