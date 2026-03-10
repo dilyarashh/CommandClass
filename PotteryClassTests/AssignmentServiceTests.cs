@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
+using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Services;
@@ -13,9 +14,11 @@ public class AssignmentServiceTests
 {
     private readonly Mock<IAssignmentRepository> _repoMock = new();
     private readonly Mock<ICurrentUser> _currentUserMock = new();
+    private readonly Mock<ICourseStudentRepository> _courseStudentMock = new();
+    private readonly Mock<ICourseTeacherRepository> _courseTeacherMock = new();
 
     private AssignmentService CreateService()
-        => new(_repoMock.Object, _currentUserMock.Object);
+        => new(_repoMock.Object, _courseTeacherMock.Object,  _courseStudentMock.Object, _currentUserMock.Object);
 
     [Fact]
     public async Task CreateAsync_Should_Create_Assignment()
@@ -29,7 +32,8 @@ public class AssignmentServiceTests
             Deadline = DateTime.UtcNow.AddDays(7)
         };
 
-        _currentUserMock.Setup(x => x.GetUserId()).Returns(Guid.NewGuid());
+        _currentUserMock.Setup(x => x.GetRole())
+            .Returns(UserRole.Admin);
 
         var service = CreateService();
 
@@ -45,6 +49,9 @@ public class AssignmentServiceTests
     {
         var id = Guid.NewGuid();
 
+        _currentUserMock.Setup(x => x.GetRole())
+            .Returns(UserRole.Admin);
+        
         _repoMock.Setup(r => r.GetByIdAsync(id))
             .ReturnsAsync(new Assignment
             {
@@ -66,6 +73,9 @@ public class AssignmentServiceTests
     {
         var id = Guid.NewGuid();
 
+        _currentUserMock.Setup(x => x.GetRole())
+            .Returns(UserRole.Admin);
+        
         var assignment = new Assignment
         {
             Id = id,
@@ -97,6 +107,9 @@ public class AssignmentServiceTests
     {
         var id = Guid.NewGuid();
 
+        _currentUserMock.Setup(x => x.GetRole())
+            .Returns(UserRole.Admin);
+        
         var assignment = new Assignment { Id = id };
 
         _repoMock.Setup(r => r.GetByIdAsync(id))
