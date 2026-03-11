@@ -245,4 +245,124 @@ public class CommentServiceTests
 
         await act.Should().ThrowAsync<ForbiddenException>();
     }
+
+
+    /// Тесты на редактирование комментария
+
+    [Fact]
+    public async Task UpdateComment_WhenCommentNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var commentId = Guid.NewGuid();
+        var request = new UpdateCommentRequest { Text = "Updated text" };
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync((Comment?)null);
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        Func<Task> act = () => service.UpdateCommentAsync(commentId, request);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task UpdateComment_WhenUserIsNotAuthor_ThrowsForbidden()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var commentId = Guid.NewGuid();
+        var currentUserId = Guid.NewGuid();
+        var authorId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(currentUserId);
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync(new Comment
+            {
+                Id = commentId,
+                UserId = authorId,
+                Text = "Old text"
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        Func<Task> act = () => service.UpdateCommentAsync(
+            commentId,
+            new UpdateCommentRequest { Text = "Updated text" });
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task UpdateComment_WhenTextEmpty_ThrowsBadRequest()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var commentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync(new Comment
+            {
+                Id = commentId,
+                UserId = userId,
+                Text = "Old text"
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        Func<Task> act = () => service.UpdateCommentAsync(
+            commentId,
+            new UpdateCommentRequest { Text = "" });
+
+        await act.Should().ThrowAsync<BadRequestException>();
+    }
+
+    [Fact]
+    public async Task UpdateComment_WhenUserIsAuthor_UpdatesComment()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var commentId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var comment = new Comment
+        {
+            Id = commentId,
+            UserId = userId,
+            AssignmentId = Guid.NewGuid(),
+            Text = "Old text",
+            Created = DateTime.UtcNow.AddMinutes(-10)
+        };
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync(comment);
+
+        repo.Setup(x => x.SaveChangesAsync())
+            .Returns(Task.CompletedTask);
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        var result = await service.UpdateCommentAsync(
+            commentId,
+            new UpdateCommentRequest { Text = "Updated text" });
+
+        result.Id.Should().Be(commentId);
+        result.Text.Should().Be("Updated text");
+        result.UserId.Should().Be(userId);
+
+        comment.Text.Should().Be("Updated text");
+
+        repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
 }

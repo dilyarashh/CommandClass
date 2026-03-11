@@ -84,4 +84,9 @@ public class CommentService(ICommentRepository repo, ICurrentUser currentUser) :
         repo.Delete(comment);
         await repo.SaveChangesAsync();
     }
+
+    public async Task<CommentDto> UpdateCommentAsync(Guid commentId, UpdateCommentRequest request)
+    {
+        throw new NotImplementedException();
+    }
 }
