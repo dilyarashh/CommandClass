@@ -134,6 +134,11 @@
             Получить список преподавателей курса
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.GradesController.CreateGrade(System.Guid,PotteryClass.Data.DTOs.CreateGradeRequest)">
+            <summary>
+            Поставить оценку за задание студенту
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
