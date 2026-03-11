@@ -64,8 +64,7 @@ public class SubmissionServiceTests
             {
                 new()
                 {
-                    File = file,
-                    Type = FileType.Image
+                    File = file
                 }
             }
         };
@@ -126,8 +125,8 @@ public class SubmissionServiceTests
         {
             Files = new List<SubmissionFileFormRequest>
             {
-                new() { File = file1, Type = FileType.Image },
-                new() { File = file2, Type = FileType.Document }
+                new() { File = file1 },
+                new() { File = file2 }
             }
         };
 
