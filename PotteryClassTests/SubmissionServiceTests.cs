@@ -293,4 +293,33 @@ public class SubmissionServiceTests
 
         result.Id.Should().Be(submissionId);
     }
+    
+    [Fact]
+    public async Task GetMySubmissionAsync_Should_Return_Current_User_Submission()
+    {
+        var assignmentId = Guid.NewGuid();
+        var studentId = Guid.NewGuid();
+
+        var submission = new Submission
+        {
+            Id = Guid.NewGuid(),
+            AssignmentId = assignmentId,
+            StudentId = studentId,
+            Created = DateTime.UtcNow,
+            Status = SubmissionStatus.Submitted
+        };
+
+        _submissionRepo.Setup(x => x.GetByAssignmentAndStudentAsync(assignmentId, studentId))
+            .ReturnsAsync(submission);
+
+        _currentUser.Setup(x => x.GetUserId()).Returns(studentId);
+        _currentUser.Setup(x => x.GetRole()).Returns(UserRole.Student);
+
+        var service = CreateService();
+
+        var result = await service.GetMySubmissionAsync(assignmentId);
+
+        result.AssignmentId.Should().Be(assignmentId);
+        result.StudentId.Should().Be(studentId);
+    }
 }
