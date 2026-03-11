@@ -15,7 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
-    
+    public DbSet<Grade> Grades { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -50,6 +51,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(c => c.Teachers)
                 .HasForeignKey(x => x.CourseId);
 
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
+
             b.Property(x => x.CreatedAtUtc).IsRequired();
         });
 
@@ -67,6 +72,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.Property(x => x.IsBlocked).IsRequired();
             b.Property(x => x.CreatedAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<Grade>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Value)
+                .IsRequired();
+
+            b.Property(x => x.CreatedAtUtc)
+                .IsRequired();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.Grades)
+                .HasForeignKey(x => x.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.Student)
+                .WithMany()
+                .HasForeignKey(x => x.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.Teacher)
+                .WithMany()
+                .HasForeignKey(x => x.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasIndex(x => new { x.AssignmentId, x.StudentId })
+                .IsUnique();
         });
     }
 }
