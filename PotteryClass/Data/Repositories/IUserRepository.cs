@@ -11,4 +11,5 @@ public interface IUserRepository
     Task UpdateAsync(User user);
     Task DeleteAsync(User user);
     Task<PagedResult<User>> GetAllAsync(UsersQuery query);
+    Task<bool> IsTeacherAnywhereAsync(Guid userId);
 }
