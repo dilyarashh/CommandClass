@@ -25,12 +25,25 @@ public class CommentsController(ICommentService service) : ControllerBase
     /// <summary>
     /// Получить список комментариев задания
     /// </summary>
-    [HttpGet]
+    [HttpGet("{assignmentId:guid}/comments")]
     [ProducesResponseType(typeof(List<CommentDto>), 200)]
     public async Task<ActionResult<List<CommentDto>>> GetComments(Guid assignmentId)
     {
         var result = await service.GetCommentsAsync(assignmentId);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Удалить комментарий
+    /// </summary>
+    [Authorize]
+    [HttpDelete("comments/{commentId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteComment(Guid commentId)
+    {
+        await service.DeleteCommentAsync(commentId);
+
+        return NoContent();
     }
 }

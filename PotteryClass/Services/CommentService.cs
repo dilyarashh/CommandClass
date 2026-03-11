@@ -1,5 +1,6 @@
 using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
+using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Infrastructure.Errors.Exceptions;
@@ -64,8 +65,23 @@ public class CommentService(ICommentRepository repo, ICurrentUser currentUser) :
             .ToList();
     }
 
-    public Task DeleteCommentAsync(Guid commentId)
+    public async Task DeleteCommentAsync(Guid commentId)
     {
-        throw new NotImplementedException();
+        var comment = await repo.GetByIdAsync(commentId);
+
+        if (comment == null)
+            throw new NotFoundException("Комментарий не найден");
+
+        var currentUserId = currentUser.GetUserId();
+        var currentRole = currentUser.GetRole();
+
+        var isAuthor = comment.UserId == currentUserId;
+        var isAdmin = currentRole == UserRole.Admin;
+
+        if (!isAuthor && !isAdmin)
+            throw new ForbiddenException("Вы не можете удалить этот комментарий (вы не его автор и не админ)");
+
+        repo.Delete(comment);
+        await repo.SaveChangesAsync();
     }
 }
