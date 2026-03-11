@@ -60,4 +60,15 @@ public class SubmissionsController(ISubmissionService service) : ControllerBase
         var result = await service.GetByIdAsync(submissionId);
         return Ok(result);
     }
+    
+    /// <summary>
+    /// Получить мое решение по заданию
+    /// </summary>
+    [Authorize]
+    [HttpGet("/assignments/{assignmentId}/my-submission")]
+    public async Task<ActionResult<SubmissionDto>> GetMySubmission(Guid assignmentId)
+    {
+        var result = await service.GetMySubmissionAsync(assignmentId);
+        return Ok(result);
+    }
 }

@@ -8,4 +8,5 @@ public interface ISubmissionService
     Task DeleteFilesAsync(Guid submissionId, List<Guid> fileIds);
     Task<List<SubmissionDto>> GetAssignmentSubmissionsAsync(Guid assignmentId);
     Task<SubmissionDto> GetByIdAsync(Guid submissionId);
+    Task<SubmissionDto> GetMySubmissionAsync(Guid assignmentId);
 }
