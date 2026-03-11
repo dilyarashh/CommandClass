@@ -82,6 +82,38 @@ public class GradeService(
 
     public async Task DeleteGradeAsync(Guid gradeId)
     {
-        throw new NotImplementedException();
+        var grade = await gradeRepo.GetByIdAsync(gradeId);
+
+        if (grade == null)
+        {
+            throw new NotFoundException("Оценка не найдена");
+        }
+
+        var assignment = await assignmentRepo.GetByIdAsync(grade.AssignmentId);
+
+        if (assignment == null)
+        {
+            throw new NotFoundException("Задание не найдено");
+        }
+
+        var course = await courseRepo.GetByIdAsync(assignment.CourseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var userId = currentUser.GetUserId();
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        if (!isTeacher)
+        {
+            throw new ForbiddenException("Только преподаватель курса может удалять оценки");
+        }
+
+        gradeRepo.Delete(grade);
+
+        await gradeRepo.SaveChangesAsync();
     }
 }

@@ -139,6 +139,11 @@
             Поставить оценку за задание студенту
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.GradesController.DeleteGrade(System.Guid)">
+            <summary>
+            Удалить оценку
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться

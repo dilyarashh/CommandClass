@@ -21,4 +21,17 @@ public class GradesController(IGradeService service) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Удалить оценку
+    /// </summary>
+    [Authorize]
+    [HttpDelete("grades/{gradeId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteGrade(Guid gradeId)
+    {
+        await service.DeleteGradeAsync(gradeId);
+
+        return NoContent();
+    }
 }
