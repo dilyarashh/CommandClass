@@ -9,6 +9,8 @@ public class Submission
     public Guid StudentId { get; set; }
     public DateTime Created { get; set; }
     public int? Grade { get; set; }
+    public Guid? GradedByTeacherId { get; set; }
+    public DateTime? GradedAtUtc { get; set; }
     public SubmissionStatus Status { get; set; }
     public ICollection<SubmissionFile> Files { get; set; } = new List<SubmissionFile>();
 }

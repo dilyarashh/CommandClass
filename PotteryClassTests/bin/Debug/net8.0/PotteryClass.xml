@@ -134,14 +134,14 @@
             Получить список преподавателей курса
             </summary>
         </member>
-        <member name="M:PotteryClass.Controllers.GradesController.CreateGrade(System.Guid,PotteryClass.Data.DTOs.CreateGradeRequest)">
+        <member name="M:PotteryClass.Controllers.GradesController.SetGrade(System.Guid,PotteryClass.Data.DTOs.SetSubmissionGradeRequest)">
             <summary>
-            Поставить оценку за задание студенту
+            Поставить или обновить оценку за решение
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.GradesController.DeleteGrade(System.Guid)">
             <summary>
-            Удалить оценку
+            Удалить оценку у решения
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
