@@ -1,7 +1,6 @@
 namespace PotteryClass.Data.DTOs;
 
-public class CreateGradeRequest
+public class SetSubmissionGradeRequest
 {
-    public Guid StudentId { get; set; }
     public int Value { get; set; }
 }

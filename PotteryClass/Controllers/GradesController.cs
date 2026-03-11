@@ -6,31 +6,33 @@ using PotteryClass.Services;
 namespace PotteryClass.Controllers;
 
 [ApiController]
-[Route("api/assignments")]
+[Route("api/submissions")]
 public class GradesController(IGradeService service) : ControllerBase
 {
     /// <summary>
-    /// Поставить оценку за задание студенту
+    /// Поставить или обновить оценку за решение
     /// </summary>
     [Authorize]
-    [HttpPost("{assignmentId:guid}/grades")]
-    [ProducesResponseType(typeof(GradeDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<GradeDto>> CreateGrade(Guid assignmentId, [FromBody] CreateGradeRequest request)
+    [HttpPut("{submissionId:guid}/grade")]
+    [ProducesResponseType(typeof(SubmissionGradeDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SubmissionGradeDto>> SetGrade(
+        Guid submissionId,
+        [FromBody] SetSubmissionGradeRequest request)
     {
-        var result = await service.CreateGradeAsync(assignmentId, request);
+        var result = await service.SetGradeAsync(submissionId, request);
 
         return Ok(result);
     }
 
     /// <summary>
-    /// Удалить оценку
+    /// Удалить оценку у решения
     /// </summary>
     [Authorize]
-    [HttpDelete("grades/{gradeId:guid}")]
+    [HttpDelete("{submissionId:guid}/grade")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> DeleteGrade(Guid gradeId)
+    public async Task<IActionResult> DeleteGrade(Guid submissionId)
     {
-        await service.DeleteGradeAsync(gradeId);
+        await service.DeleteGradeAsync(submissionId);
 
         return NoContent();
     }
