@@ -1,4 +1,5 @@
 using PotteryClass.Data.DTOs;
+using PotteryClass.Data.Entities.Enums;
 
 namespace PotteryClass.Services;
 
@@ -8,7 +9,7 @@ public interface ICourseService
 
     Task<CourseDto> JoinCourseAsync(JoinCourseRequest dto);
 
-    Task<List<MyCourseDto>> GetMyCoursesAsync();
+    Task<List<MyCourseDto>> GetMyCoursesAsync(MyCoursesFilter filter);
 
     Task<CourseDto> GetCourseByIdAsync(Guid courseId);
 
