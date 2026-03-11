@@ -128,4 +128,34 @@ public class SubmissionService(
             }).ToList()
         };
     }
+    
+    public async Task<List<SubmissionDto>> GetAssignmentSubmissionsAsync(Guid assignmentId)
+    {
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+                         ?? throw new NotFoundException("Задание не найдено");
+
+        var role = _currentUser.GetRole();
+
+        if (role != UserRole.Admin && role != UserRole.Teacher)
+            throw new ForbiddenException("Нет доступа");
+
+        var submissions = await _submissionRepository.GetByAssignmentAsync(assignmentId);
+
+        return submissions.Select(Map).ToList();
+    }
+    
+    public async Task<SubmissionDto> GetByIdAsync(Guid submissionId)
+    {
+        var submission = await _submissionRepository.GetByIdAsync(submissionId)
+                         ?? throw new NotFoundException("Решение не найдено");
+
+        var role = _currentUser.GetRole();
+        var userId = _currentUser.GetUserId();
+
+        if (role != UserRole.Admin &&
+            submission.StudentId != userId)
+            throw new ForbiddenException("Нет доступа");
+
+        return Map(submission);
+    }
 }

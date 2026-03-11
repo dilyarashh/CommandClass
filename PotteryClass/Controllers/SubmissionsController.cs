@@ -38,4 +38,26 @@ public class SubmissionsController(ISubmissionService service) : ControllerBase
         await service.DeleteFilesAsync(submissionId, fileIds);
         return NoContent();
     }
+    
+    /// <summary>
+    /// Получить все решения задания
+    /// </summary>
+    [Authorize]
+    [HttpGet("/assignments/{assignmentId}/submissions")]
+    public async Task<ActionResult<List<SubmissionDto>>> GetAssignmentSubmissions(Guid assignmentId)
+    {
+        var result = await service.GetAssignmentSubmissionsAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Получить решение по id
+    /// </summary>
+    [Authorize]
+    [HttpGet("{submissionId}")]
+    public async Task<ActionResult<SubmissionDto>> GetById(Guid submissionId)
+    {
+        var result = await service.GetByIdAsync(submissionId);
+        return Ok(result);
+    }
 }

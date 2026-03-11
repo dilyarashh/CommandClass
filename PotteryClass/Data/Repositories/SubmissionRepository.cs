@@ -35,4 +35,13 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
         db.Submissions.Update(submission);
         await db.SaveChangesAsync();
     }
+    
+    public async Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId)
+    {
+        return await db.Submissions
+            .Include(x => x.Files)
+            .Where(x => x.AssignmentId == assignmentId)
+            .OrderByDescending(x => x.Created)
+            .ToListAsync();
+    }
 }
