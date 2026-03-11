@@ -83,14 +83,14 @@ public class UsersController(IUserService service) : ControllerBase
     }
 
     /// <summary>
-    /// Получить фактическую роль пользователя по айди
+    /// Получить фактическую роль текущего пользователя
     /// </summary>
-    [Authorize(Roles = "Admin")]
-    [HttpGet("{id:guid}/role")]
+    [Authorize]
+    [HttpGet("me/role")]
     [ProducesResponseType(typeof(UserRoleDto), 200)]
-    public async Task<ActionResult<UserRoleDto>> GetRoleById(Guid id)
+    public async Task<ActionResult<UserRoleDto>> GetMyActualRole()
     {
-        var role = await service.GetActualRoleByIdAsync(id);
+        var role = await service.GetActualRoleAsync();
         return Ok(role);
     }
 }

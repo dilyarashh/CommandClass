@@ -123,9 +123,11 @@ public class UserService(
         };
     }
 
-    public async Task<UserRoleDto> GetActualRoleByIdAsync(Guid id)
+    public async Task<UserRoleDto> GetActualRoleAsync()
     {
-        var user = await _userRepository.GetByIdAsync(id)
+        var userId = _currentUser.GetUserId();
+
+        var user = await _userRepository.GetByIdAsync(userId)
                    ?? throw new NotFoundException("Пользователь не найден");
 
         if (user.Role == UserRole.Admin)
@@ -136,7 +138,7 @@ public class UserService(
             };
         }
 
-        var isTeacher = await _userRepository.IsTeacherAnywhereAsync(id);
+        var isTeacher = await _userRepository.IsTeacherAnywhereAsync(userId);
 
         return new UserRoleDto
         {
