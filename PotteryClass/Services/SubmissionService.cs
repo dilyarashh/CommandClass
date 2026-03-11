@@ -158,4 +158,15 @@ public class SubmissionService(
 
         return Map(submission);
     }
+    
+    public async Task<SubmissionDto> GetMySubmissionAsync(Guid assignmentId)
+    {
+        var studentId = _currentUser.GetUserId();
+
+        var submission = await _submissionRepository
+                             .GetByAssignmentAndStudentAsync(assignmentId, studentId)
+                         ?? throw new NotFoundException("Решение не найдено");
+
+        return Map(submission);
+    }
 }
