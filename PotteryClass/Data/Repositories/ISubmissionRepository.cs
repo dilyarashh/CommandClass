@@ -9,4 +9,5 @@ public interface ISubmissionRepository
     Task AddAsync(Submission submission);
     Task<Submission?> GetByAssignmentAndStudentAsync(Guid assignmentId, Guid studentId);
     Task UpdateAsync(Submission submission);
+    Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId);
 }
