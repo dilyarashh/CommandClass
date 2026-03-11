@@ -158,13 +158,13 @@ public class CourseService(
         };
     }
 
-    public async Task<List<MyCourseDto>> GetMyCoursesAsync()
+    public async Task<List<MyCourseDto>> GetMyCoursesAsync(MyCoursesFilter filter)
     {
         var userId = currentUser.GetUserId();
 
         var courses = await repo.GetUserCoursesAsync(userId);
 
-        return courses.Select(c =>
+        var result = courses.Select(c =>
         {
             var isTeacher = c.Teachers.Any(t => t.UserId == userId);
 
@@ -175,7 +175,15 @@ public class CourseService(
                 Code = c.Code,
                 Role = isTeacher ? "Teacher" : "Student"
             };
-        }).ToList();
+        });
+
+        if (filter == MyCoursesFilter.Teacher)
+            result = result.Where(x => x.Role == "Teacher");
+
+        if (filter == MyCoursesFilter.Student)
+            result = result.Where(x => x.Role == "Student");
+
+        return result.ToList();
     }
 
     public async Task<CourseDto> GetCourseByIdAsync(Guid courseId)

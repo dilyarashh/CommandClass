@@ -24,14 +24,19 @@
             Удалить задание
             </summary>
         </member>
-        <member name="M:PotteryClass.Controllers.AssignmentsController.UploadFile(System.Guid,PotteryClass.Data.DTOs.AssignmentFileFormRequest)">
+        <member name="M:PotteryClass.Controllers.AssignmentsController.UploadFiles(System.Guid,System.Collections.Generic.List{Microsoft.AspNetCore.Http.IFormFile})">
             <summary>
             Добавление файла к заданию
             </summary>
         </member>
-        <member name="M:PotteryClass.Controllers.AssignmentsController.DeleteFile(System.Guid,System.Guid)">
+        <member name="M:PotteryClass.Controllers.AssignmentsController.DeleteFiles(System.Guid,System.Collections.Generic.List{System.Guid})">
             <summary>
             Удаление файла из задания
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.AssignmentsController.GetCourseAssignments(System.Guid,System.Int32,System.Int32)">
+            <summary>
+            Получить задания курса
             </summary>
         </member>
         <member name="M:PotteryClass.Controllers.CommentsController.CreateComment(System.Guid,PotteryClass.Data.DTOs.CreateCommentRequest)">
@@ -54,7 +59,7 @@
             Присоединиться к курсу
             </summary>
         </member>
-        <member name="M:PotteryClass.Controllers.CoursesController.GetMyCourses">
+        <member name="M:PotteryClass.Controllers.CoursesController.GetMyCourses(PotteryClass.Data.Entities.Enums.MyCoursesFilter)">
             <summary>
             Получить список своих курсов
             </summary>

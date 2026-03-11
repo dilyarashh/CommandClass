@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PotteryClass.Data.DTOs;
 using PotteryClass.Services;
+using PotteryClass.Data.Entities.Enums;
 
 namespace PotteryClass.Controllers;
 
@@ -37,9 +38,9 @@ public class CoursesController(ICourseService service) : ControllerBase
     /// Получить список своих курсов
     /// </summary>
     [HttpGet("my")]
-    public async Task<ActionResult<List<MyCourseDto>>> GetMyCourses()
+    public async Task<ActionResult<List<MyCourseDto>>> GetMyCourses([FromQuery] MyCoursesFilter filter = MyCoursesFilter.All)
     {
-        var result = await service.GetMyCoursesAsync();
+        var result = await service.GetMyCoursesAsync(filter);
         return Ok(result);
     }
 

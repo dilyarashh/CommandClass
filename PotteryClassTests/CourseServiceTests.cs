@@ -383,7 +383,7 @@ public class CourseServiceTests
             Mock.Of<IValidator<JoinCourseRequest>>()
         );
 
-        var result = await service.GetMyCoursesAsync();
+        var result = await service.GetMyCoursesAsync(MyCoursesFilter.All);
 
         result.Should().HaveCount(1);
         result[0].Name.Should().Be("Гончарка");
@@ -413,7 +413,7 @@ public class CourseServiceTests
             Mock.Of<IValidator<JoinCourseRequest>>()
         );
 
-        var result = await service.GetMyCoursesAsync();
+        var result = await service.GetMyCoursesAsync(MyCoursesFilter.All);
 
         result.Should().BeEmpty();
 
