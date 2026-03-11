@@ -269,4 +269,130 @@ public class GradeServiceTests
         gradeRepo.Verify(x => x.AddAsync(It.IsAny<Grade>()), Times.Once);
         gradeRepo.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
+
+
+    /// Тесты на удаление оценки
+
+    [Fact]
+    public async Task DeleteGrade_WhenGradeNotExists_ThrowsNotFound()
+    {
+        var assignmentRepo = new Mock<IAssignmentRepository>();
+        var gradeRepo = new Mock<IGradeRepository>();
+        var courseRepo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var gradeId = Guid.NewGuid();
+
+        gradeRepo.Setup(x => x.GetByIdAsync(gradeId))
+            .ReturnsAsync((Grade?)null);
+
+        var service = new GradeService(
+            assignmentRepo.Object,
+            gradeRepo.Object,
+            courseRepo.Object,
+            currentUser.Object);
+
+        Func<Task> act = () => service.DeleteGradeAsync(gradeId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeleteGrade_WhenUserNotTeacher_ThrowsForbidden()
+    {
+        var assignmentRepo = new Mock<IAssignmentRepository>();
+        var gradeRepo = new Mock<IGradeRepository>();
+        var courseRepo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var teacherId = Guid.NewGuid();
+        var gradeId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId())
+            .Returns(teacherId);
+
+        gradeRepo.Setup(x => x.GetByIdAsync(gradeId))
+            .ReturnsAsync(new Grade
+            {
+                Id = gradeId,
+                AssignmentId = Guid.NewGuid()
+            });
+
+        assignmentRepo.Setup(x => x.GetByIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(new Assignment
+            {
+                CourseId = courseId
+            });
+
+        courseRepo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(new Course
+            {
+                Id = courseId,
+                Teachers = new List<CourseTeacher>(),
+                Students = new List<CourseStudent>()
+            });
+
+        var service = new GradeService(
+            assignmentRepo.Object,
+            gradeRepo.Object,
+            courseRepo.Object,
+            currentUser.Object);
+
+        Func<Task> act = () => service.DeleteGradeAsync(gradeId);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task DeleteGrade_WhenUserIsTeacher_DeletesGrade()
+    {
+        var assignmentRepo = new Mock<IAssignmentRepository>();
+        var gradeRepo = new Mock<IGradeRepository>();
+        var courseRepo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var teacherId = Guid.NewGuid();
+        var gradeId = Guid.NewGuid();
+        var assignmentId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId())
+            .Returns(teacherId);
+
+        gradeRepo.Setup(x => x.GetByIdAsync(gradeId))
+            .ReturnsAsync(new Grade
+            {
+                Id = gradeId,
+                AssignmentId = assignmentId
+            });
+
+        assignmentRepo.Setup(x => x.GetByIdAsync(assignmentId))
+            .ReturnsAsync(new Assignment
+            {
+                Id = assignmentId,
+                CourseId = courseId
+            });
+
+        courseRepo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(new Course
+            {
+                Id = courseId,
+                Teachers = new List<CourseTeacher>
+                {
+                new() { UserId = teacherId }
+                }
+            });
+
+        var service = new GradeService(
+            assignmentRepo.Object,
+            gradeRepo.Object,
+            courseRepo.Object,
+            currentUser.Object);
+
+        await service.DeleteGradeAsync(gradeId);
+
+        gradeRepo.Verify(x => x.Delete(It.IsAny<Grade>()), Times.Once);
+        gradeRepo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
 }
