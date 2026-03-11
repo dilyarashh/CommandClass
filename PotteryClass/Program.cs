@@ -137,8 +137,8 @@ using (var scope = app.Services.CreateScope())
             TimeSpan.FromSeconds(5));
 
     retry.Execute(() => db.Database.Migrate());
-    
-    await DbSeeder.SeedAdminAsync(services);
+
+    await DbSeeder.SeedInitialDataAsync(services);
 }
 
 app.UseSwagger();
