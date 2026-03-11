@@ -21,4 +21,14 @@ public class GradeRepository(AppDbContext db) : IGradeRepository
     {
         await db.SaveChangesAsync();
     }
+
+    public async Task<Grade?> GetByIdAsync(Guid gradeId)
+    {
+        return await db.Grades.FindAsync(gradeId);
+    }
+
+    public void Delete(Grade grade)
+    {
+        db.Grades.Remove(grade);
+    }
 }

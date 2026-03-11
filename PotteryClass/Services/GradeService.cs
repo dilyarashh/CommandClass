@@ -79,4 +79,9 @@ public class GradeService(
             Value = grade.Value
         };
     }
+
+    public async Task DeleteGradeAsync(Guid gradeId)
+    {
+        throw new NotImplementedException();
+    }
 }

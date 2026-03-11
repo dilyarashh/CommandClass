@@ -9,4 +9,8 @@ public interface IGradeRepository
     Task<bool> ExistsAsync(Guid assignmentId, Guid studentId);
 
     Task SaveChangesAsync();
+
+    Task<Grade?> GetByIdAsync(Guid gradeId);
+
+    void Delete(Grade grade);
 }
