@@ -365,4 +365,55 @@ public class CommentServiceTests
 
         repo.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
+
+    [Fact]
+    public async Task GetComments_WhenCommentsExist_ReturnsCommentsOrderedByCreatedDesc()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var assignmentId = Guid.NewGuid();
+        var older = DateTime.UtcNow.AddMinutes(-10);
+        var newer = DateTime.UtcNow;
+
+        repo.Setup(x => x.AssignmentExistsAsync(assignmentId))
+            .ReturnsAsync(true);
+
+        repo.Setup(x => x.GetAssignmentCommentsAsync(assignmentId))
+            .ReturnsAsync(new List<Comment>
+            {
+            new Comment
+            {
+                Id = Guid.NewGuid(),
+                Text = "New comment",
+                Created = newer,
+                UserId = Guid.NewGuid(),
+                User = new User
+                {
+                    FirstName = "John",
+                    LastName = "Doe"
+                }
+            },
+            new Comment
+            {
+                Id = Guid.NewGuid(),
+                Text = "Old comment",
+                Created = older,
+                UserId = Guid.NewGuid(),
+                User = new User
+                {
+                    FirstName = "Jane",
+                    LastName = "Smith"
+                }
+            }
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        var result = await service.GetCommentsAsync(assignmentId);
+
+        result.Should().HaveCount(2);
+        result[0].Text.Should().Be("New comment");
+        result[1].Text.Should().Be("Old comment");
+    }
 }

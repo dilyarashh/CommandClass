@@ -22,7 +22,7 @@ public class CommentRepository(AppDbContext db) : ICommentRepository
         => db.Comments
             .Where(x => x.AssignmentId == assignmentId)
             .Include(x => x.User)
-            .OrderBy(x => x.Created)
+            .OrderByDescending(x => x.Created)
             .ToListAsync();
 
     public Task<Comment?> GetByIdAsync(Guid commentId)
