@@ -9,4 +9,6 @@ public interface ICommentService
     Task<List<CommentDto>> GetCommentsAsync(Guid assignmentId);
 
     Task DeleteCommentAsync(Guid commentId);
+
+    Task<CommentDto> UpdateCommentAsync(Guid commentId, UpdateCommentRequest request);
 }
