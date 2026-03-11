@@ -144,6 +144,16 @@
             Удалить оценку
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.SubmissionsController.Submit(System.Guid,PotteryClass.Data.DTOs.SubmissionFilesFormRequest)">
+            <summary>
+            Отправить решение задания
+            </summary>
+        </member>
+        <member name="M:PotteryClass.Controllers.SubmissionsController.DeleteFiles(System.Guid,System.Collections.Generic.List{System.Guid})">
+            <summary>
+            Удалить файлы решения
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.UsersController.Create(PotteryClass.Data.DTOs.RegistrationRequest)">
             <summary>
             Зарегистрироваться
