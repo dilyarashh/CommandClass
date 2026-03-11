@@ -3,6 +3,7 @@ using Xunit;
 using Moq;
 using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
+using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Infrastructure.Errors.Exceptions;
@@ -145,5 +146,103 @@ public class CommentServiceTests
 
         result.Should().HaveCount(1);
         result.First().Text.Should().Be("Test comment");
+    }
+
+
+    /// Тесты на удаление комментария
+
+    [Fact]
+    public async Task DeleteComment_WhenCommentNotExists_ThrowsNotFound()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var commentId = Guid.NewGuid();
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync((Comment?)null);
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        Func<Task> act = () => service.DeleteCommentAsync(commentId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task DeleteComment_WhenUserIsAuthor_DeletesComment()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var userId = Guid.NewGuid();
+        var commentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync(new Comment
+            {
+                Id = commentId,
+                UserId = userId
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        await service.DeleteCommentAsync(commentId);
+
+        repo.Verify(x => x.Delete(It.IsAny<Comment>()), Times.Once);
+        repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteComment_WhenUserIsAdmin_DeletesComment()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var commentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync(new Comment
+            {
+                Id = commentId,
+                UserId = Guid.NewGuid()
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        await service.DeleteCommentAsync(commentId);
+
+        repo.Verify(x => x.Delete(It.IsAny<Comment>()), Times.Once);
+        repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteComment_WhenUserNotAuthorAndNotAdmin_ThrowsForbidden()
+    {
+        var repo = new Mock<ICommentRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var userId = Guid.NewGuid();
+        var commentId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+        currentUser.Setup(x => x.GetRole()).Returns(UserRole.Teacher);
+
+        repo.Setup(x => x.GetByIdAsync(commentId))
+            .ReturnsAsync(new Comment
+            {
+                Id = commentId,
+                UserId = Guid.NewGuid()
+            });
+
+        var service = new CommentService(repo.Object, currentUser.Object);
+
+        Func<Task> act = () => service.DeleteCommentAsync(commentId);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }

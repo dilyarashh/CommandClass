@@ -63,4 +63,9 @@ public class CommentService(ICommentRepository repo, ICurrentUser currentUser) :
             })
             .ToList();
     }
+
+    public Task DeleteCommentAsync(Guid commentId)
+    {
+        throw new NotImplementedException();
+    }
 }

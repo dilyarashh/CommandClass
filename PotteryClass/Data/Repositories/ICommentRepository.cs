@@ -13,4 +13,8 @@ public interface ICommentRepository
     Task<bool> AssignmentExistsAsync(Guid assignmentId);
 
     Task<List<Comment>> GetAssignmentCommentsAsync(Guid assignmentId);
+
+    Task<Comment?> GetByIdAsync(Guid commentId);
+
+    void Delete(Comment comment);
 }

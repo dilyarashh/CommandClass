@@ -24,4 +24,11 @@ public class CommentRepository(AppDbContext db) : ICommentRepository
             .Include(x => x.User)
             .OrderBy(x => x.Created)
             .ToListAsync();
+
+    public Task<Comment?> GetByIdAsync(Guid commentId)
+        => db.Comments
+            .FirstOrDefaultAsync(x => x.Id == commentId);
+
+    public void Delete(Comment comment)
+        => db.Comments.Remove(comment);
 }
