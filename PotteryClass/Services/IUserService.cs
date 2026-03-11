@@ -11,4 +11,5 @@ public interface IUserService
     Task DeleteCurrentUserAsync();
     Task<UserDto> GetByIdAsync(Guid id);
     Task<PagedResult<UserDto>> GetAllAsync(UsersQuery query);
+    Task<UserRoleDto> GetActualRoleByIdAsync(Guid id);
 }

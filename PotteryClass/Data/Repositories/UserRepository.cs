@@ -83,4 +83,9 @@ public class UserRepository(AppDbContext db) : IUserRepository
             TotalCount = total
         };
     }
+
+    public async Task<bool> IsTeacherAnywhereAsync(Guid userId)
+    {
+        return await db.CourseTeachers.AnyAsync(x => x.UserId == userId);
+    }
 }

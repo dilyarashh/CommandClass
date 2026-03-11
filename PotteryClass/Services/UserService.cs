@@ -123,6 +123,27 @@ public class UserService(
         };
     }
 
+    public async Task<UserRoleDto> GetActualRoleByIdAsync(Guid id)
+    {
+        var user = await _userRepository.GetByIdAsync(id)
+                   ?? throw new NotFoundException("Пользователь не найден");
+
+        if (user.Role == UserRole.Admin)
+        {
+            return new UserRoleDto
+            {
+                Role = UserRole.Admin
+            };
+        }
+
+        var isTeacher = await _userRepository.IsTeacherAnywhereAsync(id);
+
+        return new UserRoleDto
+        {
+            Role = isTeacher ? UserRole.Teacher : UserRole.Student
+        };
+    }
+
     private static UserDto Map(User user) => new()
     {
         Id = user.Id,
