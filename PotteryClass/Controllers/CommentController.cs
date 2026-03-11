@@ -46,4 +46,17 @@ public class CommentsController(ICommentService service) : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Редактировать свой комментарий
+    /// </summary>
+    [Authorize]
+    [HttpPut("comments/{commentId:guid}")]
+    [ProducesResponseType(typeof(CommentDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<CommentDto>> UpdateComment(Guid commentId, [FromBody] UpdateCommentRequest request)
+    {
+        var result = await service.UpdateCommentAsync(commentId, request);
+
+        return Ok(result);
+    }
 }

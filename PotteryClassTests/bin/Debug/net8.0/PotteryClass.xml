@@ -54,6 +54,11 @@
             Удалить комментарий
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.CommentsController.UpdateComment(System.Guid,PotteryClass.Data.DTOs.UpdateCommentRequest)">
+            <summary>
+            Редактировать свой комментарий
+            </summary>
+        </member>
         <member name="M:PotteryClass.Controllers.CoursesController.Create(PotteryClass.Data.DTOs.CreateCourseRequest)">
             <summary>
             Создать курс (только Admin)
