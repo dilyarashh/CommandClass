@@ -220,4 +220,77 @@ public class SubmissionServiceTests
         _fileStorage.Verify(x => x.DeleteFileAsync(It.IsAny<string>()), Times.Exactly(2));
         _submissionRepo.Verify(x => x.UpdateAsync(submission), Times.Once);
     }
+    
+    [Fact]
+    public async Task GetAssignmentSubmissionsAsync_Should_Return_List()
+    {
+        var assignmentId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        var assignment = new Assignment
+        {
+            Id = assignmentId,
+            CourseId = courseId
+        };
+
+        _assignmentRepo.Setup(x => x.GetByIdAsync(assignmentId))
+            .ReturnsAsync(assignment);
+
+        var submissions = new List<Submission>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                AssignmentId = assignmentId,
+                StudentId = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                Status = SubmissionStatus.Submitted
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                AssignmentId = assignmentId,
+                StudentId = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                Status = SubmissionStatus.Submitted
+            }
+        };
+
+        _submissionRepo.Setup(x => x.GetByAssignmentAsync(assignmentId))
+            .ReturnsAsync(submissions);
+
+        _currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        var service = CreateService();
+
+        var result = await service.GetAssignmentSubmissionsAsync(assignmentId);
+
+        result.Should().HaveCount(2);
+    }
+    
+    [Fact]
+    public async Task GetByIdAsync_Should_Return_Submission()
+    {
+        var submissionId = Guid.NewGuid();
+
+        var submission = new Submission
+        {
+            Id = submissionId,
+            AssignmentId = Guid.NewGuid(),
+            StudentId = Guid.NewGuid(),
+            Created = DateTime.UtcNow,
+            Status = SubmissionStatus.Submitted
+        };
+
+        _submissionRepo.Setup(x => x.GetByIdAsync(submissionId))
+            .ReturnsAsync(submission);
+
+        _currentUser.Setup(x => x.GetRole()).Returns(UserRole.Admin);
+
+        var service = CreateService();
+
+        var result = await service.GetByIdAsync(submissionId);
+
+        result.Id.Should().Be(submissionId);
+    }
 }
