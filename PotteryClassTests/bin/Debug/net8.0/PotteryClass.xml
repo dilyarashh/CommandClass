@@ -164,6 +164,11 @@
             Получить пользователей
             </summary>
         </member>
+        <member name="M:PotteryClass.Controllers.UsersController.GetRoleById(System.Guid)">
+            <summary>
+            Получить фактическую роль пользователя по айди
+            </summary>
+        </member>
         <member name="T:PotteryClass.Migrations.AddUsers">
             <inheritdoc />
         </member>
@@ -224,13 +229,28 @@
         <member name="M:PotteryClass.Migrations.AddCourses.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
-        <member name="T:PotteryClass.Migrations.AddAssigments">
+        <member name="T:PotteryClass.Migrations.AddAssignments">
             <inheritdoc />
         </member>
-        <member name="M:PotteryClass.Migrations.AddAssigments.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+        <member name="M:PotteryClass.Migrations.AddAssignments.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
             <inheritdoc />
         </member>
-        <member name="M:PotteryClass.Migrations.AddAssigments.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+        <member name="M:PotteryClass.Migrations.AddAssignments.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddAssignments.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:PotteryClass.Migrations.AddGrades">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddGrades.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddGrades.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:PotteryClass.Migrations.AddGrades.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
     </members>
