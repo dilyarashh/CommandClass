@@ -87,6 +87,30 @@ public class CommentService(ICommentRepository repo, ICurrentUser currentUser) :
 
     public async Task<CommentDto> UpdateCommentAsync(Guid commentId, UpdateCommentRequest request)
     {
-        throw new NotImplementedException();
+        var comment = await repo.GetByIdAsync(commentId);
+
+        if (comment == null)
+            throw new NotFoundException("Комментарий не найден");
+
+        var currentUserId = currentUser.GetUserId();
+
+        if (comment.UserId != currentUserId)
+            throw new ForbiddenException("Вы можете редактировать только свой комментарий");
+
+        if (string.IsNullOrWhiteSpace(request.Text))
+            throw new BadRequestException("Текст комментария не может быть пустым");
+
+        comment.Text = request.Text;
+
+        await repo.SaveChangesAsync();
+
+        return new CommentDto
+        {
+            Id = comment.Id,
+            AssignmentId = comment.AssignmentId,
+            UserId = comment.UserId,
+            Text = comment.Text,
+            Created = comment.Created
+        };
     }
 }
