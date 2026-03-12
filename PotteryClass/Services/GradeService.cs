@@ -102,6 +102,22 @@ public class GradeService(
 
     public async Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        var course = await courseRepo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException(" урс не найден");
+        }
+
+        var teacherId = currentUser.GetUserId();
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
+
+        if (!isTeacher)
+        {
+            throw new ForbiddenException("“олько преподаватель курса может смотреть успеваемость");
+        }
+
+        return await submissionRepo.GetCourseGradesAsync(courseId);
     }
 }
