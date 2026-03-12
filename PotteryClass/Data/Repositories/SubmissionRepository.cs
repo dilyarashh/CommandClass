@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PotteryClass.Data.Entities;
+using PotteryClass.Data.DTOs;
 
 namespace PotteryClass.Data.Repositories;
 
@@ -42,6 +43,24 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
             .Include(x => x.Files)
             .Where(x => x.AssignmentId == assignmentId)
             .OrderByDescending(x => x.Created)
+            .ToListAsync();
+    }
+
+    public async Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId)
+    {
+        return await (
+            from s in db.Submissions
+            join a in db.Assignments on s.AssignmentId equals a.Id
+            join u in db.Users on s.StudentId equals u.Id
+            where a.CourseId == courseId
+            select new CourseStudentGradeDto
+            {
+                StudentId = s.StudentId,
+                StudentName = u.FirstName + " " + u.LastName,
+                AssignmentId = s.AssignmentId,
+                AssignmentTitle = a.Title,
+                Grade = s.Grade
+            })
             .ToListAsync();
     }
 }
