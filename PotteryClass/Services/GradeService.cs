@@ -99,4 +99,9 @@ public class GradeService(
 
         await submissionRepo.SaveChangesAsync();
     }
+
+    public async Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }

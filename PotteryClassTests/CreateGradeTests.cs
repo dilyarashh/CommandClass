@@ -354,4 +354,115 @@ public class GradeServiceTests
 
         submissionRepo.Verify(x => x.SaveChangesAsync(), Times.Once);
     }
+
+
+    /// Тесты на получение списка оценок студента курса
+
+    [Fact]
+    public async Task GetCourseGrades_WhenCourseNotExists_ThrowsNotFound()
+    {
+        var submissionRepo = new Mock<ISubmissionRepository>();
+        var assignmentRepo = new Mock<IAssignmentRepository>();
+        var courseRepo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var courseId = Guid.NewGuid();
+
+        courseRepo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync((Course?)null);
+
+        var service = new GradeService(
+            submissionRepo.Object,
+            assignmentRepo.Object,
+            courseRepo.Object,
+            currentUser.Object);
+
+        Func<Task> act = () => service.GetCourseGradesAsync(courseId);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task GetCourseGrades_WhenUserNotTeacher_ThrowsForbidden()
+    {
+        var submissionRepo = new Mock<ISubmissionRepository>();
+        var assignmentRepo = new Mock<IAssignmentRepository>();
+        var courseRepo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var courseId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId())
+            .Returns(userId);
+
+        courseRepo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(new Course
+            {
+                Id = courseId,
+                Teachers = new List<CourseTeacher>(),
+                Students = new List<CourseStudent>()
+            });
+
+        var service = new GradeService(
+            submissionRepo.Object,
+            assignmentRepo.Object,
+            courseRepo.Object,
+            currentUser.Object);
+
+        Func<Task> act = () => service.GetCourseGradesAsync(courseId);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task GetCourseGrades_WhenUserIsTeacher_ReturnsGrades()
+    {
+        var submissionRepo = new Mock<ISubmissionRepository>();
+        var assignmentRepo = new Mock<IAssignmentRepository>();
+        var courseRepo = new Mock<ICourseRepository>();
+        var currentUser = new Mock<ICurrentUser>();
+
+        var courseId = Guid.NewGuid();
+        var teacherId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId())
+            .Returns(teacherId);
+
+        courseRepo.Setup(x => x.GetByIdAsync(courseId))
+            .ReturnsAsync(new Course
+            {
+                Id = courseId,
+                Teachers = new List<CourseTeacher>
+                {
+                new() { UserId = teacherId }
+                },
+                Students = new List<CourseStudent>()
+            });
+
+        submissionRepo.Setup(x => x.GetCourseGradesAsync(courseId))
+            .ReturnsAsync(new List<CourseStudentGradeDto>
+            {
+            new()
+            {
+                StudentId = Guid.NewGuid(),
+                StudentName = "Ivan Ivanov",
+                AssignmentId = Guid.NewGuid(),
+                AssignmentTitle = "HW1",
+                Grade = 5
+            }
+            });
+
+        var service = new GradeService(
+            submissionRepo.Object,
+            assignmentRepo.Object,
+            courseRepo.Object,
+            currentUser.Object);
+
+        var result = await service.GetCourseGradesAsync(courseId);
+
+        result.Should().HaveCount(1);
+
+        submissionRepo.Verify(x => x.GetCourseGradesAsync(courseId), Times.Once);
+    }
 }
