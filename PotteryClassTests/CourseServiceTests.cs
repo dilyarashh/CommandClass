@@ -366,7 +366,9 @@ public class CourseServiceTests
         {
             Id = Guid.NewGuid(),
             Name = "Гончарка",
+            Description = "Базовый курс",
             Code = "abcd1234",
+            IsActive = true,
             Teachers = new List<CourseTeacher>(),
             Students = new List<CourseStudent>()
         }
@@ -387,6 +389,61 @@ public class CourseServiceTests
 
         result.Should().HaveCount(1);
         result[0].Name.Should().Be("Гончарка");
+        result[0].Description.Should().Be("Базовый курс");
+        result[0].Code.Should().Be("abcd1234");
+        result[0].IsActive.Should().BeTrue();
+        result[0].Role.Should().Be("Student");
+
+        repo.VerifyAll();
+        currentUser.VerifyAll();
+    }
+
+    [Fact]
+    public async Task GetMyCourses_WhenUserIsTeacher_ReturnsTeacherRole()
+    {
+        var repo = new Mock<ICourseRepository>(MockBehavior.Strict);
+        var currentUser = new Mock<ICurrentUser>(MockBehavior.Strict);
+
+        var userId = Guid.NewGuid();
+        var courseId = Guid.NewGuid();
+
+        currentUser.Setup(x => x.GetUserId()).Returns(userId);
+
+        var courses = new List<Course>
+    {
+        new()
+        {
+            Id = courseId,
+            Name = "Гончарка",
+            Description = "Продвинутый курс",
+            Code = "teach123",
+            IsActive = false,
+            Teachers = new List<CourseTeacher>
+            {
+                new() { UserId = userId, CourseId = courseId }
+            },
+            Students = new List<CourseStudent>()
+        }
+    };
+
+        repo.Setup(x => x.GetUserCoursesAsync(userId))
+            .ReturnsAsync(courses);
+
+        var service = new CourseService(
+            repo.Object,
+            currentUser.Object,
+            Mock.Of<ICourseCodeGenerator>(),
+            Mock.Of<IValidator<CreateCourseRequest>>(),
+            Mock.Of<IValidator<JoinCourseRequest>>()
+        );
+
+        var result = await service.GetMyCoursesAsync(MyCoursesFilter.All);
+
+        result.Should().HaveCount(1);
+        result[0].Role.Should().Be("Teacher");
+        result[0].Description.Should().Be("Продвинутый курс");
+        result[0].Code.Should().Be("teach123");
+        result[0].IsActive.Should().BeFalse();
 
         repo.VerifyAll();
         currentUser.VerifyAll();
@@ -2205,8 +2262,8 @@ public class CourseServiceTests
             {
                 Id = userId,
                 FirstName = "John",
-                LastName = "Doe",
-                Email = "john@test.com"
+                LastName = "Doper Popper",
+                Email = "john_doper@test.com"
             }
             });
 
@@ -2220,6 +2277,6 @@ public class CourseServiceTests
         var result = await service.GetCourseTeachersAsync(courseId);
 
         result.Should().HaveCount(1);
-        result.First().Email.Should().Be("john@test.com");
+        result.First().Email.Should().Be("john_doper@test.com");
     }
 }

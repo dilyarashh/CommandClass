@@ -172,7 +172,9 @@ public class CourseService(
             {
                 Id = c.Id,
                 Name = c.Name,
+                Description = c.Description,
                 Code = c.Code,
+                IsActive = c.IsActive,
                 Role = isTeacher ? "Teacher" : "Student"
             };
         });
