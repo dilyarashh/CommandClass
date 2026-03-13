@@ -1,3 +1,5 @@
+using PotteryClass.Data.Entities.Enums;
+
 namespace PotteryClass.Data.DTOs;
 
 public class CourseTeacherDto
@@ -9,4 +11,6 @@ public class CourseTeacherDto
     public string LastName { get; set; }
 
     public string Email { get; set; }
+
+    public UserRole Role { get; set; }
 }

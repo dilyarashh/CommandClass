@@ -2273,7 +2273,8 @@ public class CourseServiceTests
                 Id = userId,
                 FirstName = "John",
                 LastName = "Doper Popper",
-                Email = "john_doper@test.com"
+                Email = "john_doper@test.com",
+                Role = UserRole.Admin
             }
             });
 
@@ -2288,5 +2289,6 @@ public class CourseServiceTests
 
         result.Should().HaveCount(1);
         result.First().Email.Should().Be("john_doper@test.com");
+        result.First().Role.Should().Be(UserRole.Admin);
     }
 }
