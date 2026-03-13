@@ -49,4 +49,17 @@ public class GradesController(IGradeService service) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить свои оценки на курсе
+    /// </summary>
+    [Authorize]
+    [HttpGet("/api/courses/{courseId:guid}/my-grades")]
+    [ProducesResponseType(typeof(List<MyCourseGradeDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<MyCourseGradeDto>>> GetMyCourseGrades(Guid courseId)
+    {
+        var result = await service.GetMyCourseGradesAsync(courseId);
+
+        return Ok(result);
+    }
 }
