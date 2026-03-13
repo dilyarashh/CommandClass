@@ -41,10 +41,10 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
         .Include(x => x.Students)
         .FirstOrDefaultAsync(x => x.Id == courseId);
 
-    public Task<List<User>> GetCourseStudentsAsync(Guid courseId)
+    public Task<List<CourseStudent>> GetCourseStudentsAsync(Guid courseId)
     => db.CourseStudents
-            .Where(x => x.CourseId == courseId && !x.IsBlocked)
-            .Select(x => x.User)
+            .Include(x => x.User)
+            .Where(x => x.CourseId == courseId)
             .ToListAsync();
 
     public Task<List<Course>> GetAllAsync()

@@ -7,4 +7,6 @@ public class CourseStudentDto
     public string LastName { get; set; }
 
     public string Email { get; set; }
+
+    public bool IsBlocked { get; set; }
 }

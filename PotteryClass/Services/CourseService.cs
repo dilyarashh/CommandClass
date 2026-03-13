@@ -246,12 +246,13 @@ public class CourseService(
 
         var students = await repo.GetCourseStudentsAsync(courseId);
 
-        return students.Select(u => new CourseStudentDto
+        return students.Select(x => new CourseStudentDto
         {
-            Id = u.Id,
-            FirstName = u.FirstName,
-            LastName = u.LastName,
-            Email = u.Email
+            Id = x.User.Id,
+            FirstName = x.User.FirstName,
+            LastName = x.User.LastName,
+            Email = x.User.Email,
+            IsBlocked = x.IsBlocked
         }).ToList();
     }
 
