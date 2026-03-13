@@ -63,4 +63,19 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
             })
             .ToListAsync();
     }
+
+    public async Task<List<MyCourseGradeDto>> GetStudentCourseGradesAsync(Guid courseId, Guid studentId)
+    {
+        return await (
+            from s in db.Submissions
+            join a in db.Assignments on s.AssignmentId equals a.Id
+            where a.CourseId == courseId && s.StudentId == studentId
+            select new MyCourseGradeDto
+            {
+                AssignmentId = s.AssignmentId,
+                AssignmentTitle = a.Title,
+                Grade = s.Grade
+            })
+            .ToListAsync();
+    }
 }
