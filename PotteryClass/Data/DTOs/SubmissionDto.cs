@@ -7,6 +7,11 @@ public class SubmissionDto
     public Guid Id { get; set; }
     public Guid AssignmentId { get; set; }
     public Guid StudentId { get; set; }
+
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public string? MiddleName { get; set; }
+
     public DateTime Created { get; set; }
     public int? Grade { get; set; }
     public SubmissionStatus Status { get; set; }
