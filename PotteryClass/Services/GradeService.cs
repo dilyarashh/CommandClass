@@ -123,6 +123,27 @@ public class GradeService(
 
     public async Task<List<MyCourseGradeDto>> GetMyCourseGradesAsync(Guid courseId)
     {
-        throw new NotImplementedException();
+        var course = await courseRepo.GetByIdAsync(courseId);
+
+        if (course == null)
+        {
+            throw new NotFoundException("Курс не найден");
+        }
+
+        var studentId = currentUser.GetUserId();
+
+        var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
+
+        if (student == null)
+        {
+            throw new ForbiddenException("Только студент курса может смотреть свои оценки");
+        }
+
+        if (student.IsBlocked)
+        {
+            throw new ForbiddenException("Вы заблокированы на курсе");
+        }
+
+        return await submissionRepo.GetStudentCourseGradesAsync(courseId, studentId);
     }
 }
