@@ -36,7 +36,7 @@ public class FileStorageService : IFileStorageService
             .WithObjectSize(ms.Length)
             .WithContentType(mimeType));
 
-        return $"http://{_client}/{_bucket}/{fileName}";
+        return$"http://localhost:9000/pottery-files/{fileName}";
     }
 
     public async Task DeleteFileAsync(string url)
