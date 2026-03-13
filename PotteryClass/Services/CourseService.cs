@@ -537,7 +537,8 @@ public class CourseService(
             Id = t.Id,
             FirstName = t.FirstName,
             LastName = t.LastName,
-            Email = t.Email
+            Email = t.Email,
+            Role = t.Role
         }).ToList();
     }
 }
