@@ -697,14 +697,20 @@ public class CourseServiceTests
             .ReturnsAsync(course);
 
         repo.Setup(x => x.GetCourseStudentsAsync(courseId))
-            .ReturnsAsync(new List<User>
+            .ReturnsAsync(new List<CourseStudent>
             {
             new()
             {
-                Id = Guid.NewGuid(),
-                FirstName = "Ivan",
-                LastName = "Ivanov",
-                Email = "ivan@test.com"
+                CourseId = courseId,
+                UserId = Guid.NewGuid(),
+                IsBlocked = true,
+                User = new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = "Ivan",
+                    LastName = "Ivanov",
+                    Email = "ivan@test.com"
+                }
             }
             });
 
@@ -719,6 +725,10 @@ public class CourseServiceTests
         var result = await service.GetCourseStudentsAsync(courseId);
 
         result.Should().HaveCount(1);
+        result[0].FirstName.Should().Be("Ivan");
+        result[0].LastName.Should().Be("Ivanov");
+        result[0].Email.Should().Be("ivan@test.com");
+        result[0].IsBlocked.Should().BeTrue();
 
         repo.VerifyAll();
     }
