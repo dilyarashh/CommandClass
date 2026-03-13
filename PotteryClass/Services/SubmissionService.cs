@@ -114,9 +114,15 @@ public class SubmissionService(
             Id = submission.Id,
             AssignmentId = submission.AssignmentId,
             StudentId = submission.StudentId,
+
+            FirstName = submission.Student?.FirstName,
+            LastName = submission.Student?.LastName,
+            MiddleName = submission.Student?.MiddleName,
+
             Created = submission.Created,
             Grade = submission.Grade,
             Status = submission.Status,
+
             Files = submission.Files.Select(f => new SubmissionFileDto
             {
                 Id = f.Id,
@@ -128,7 +134,7 @@ public class SubmissionService(
             }).ToList()
         };
     }
-    
+
     public async Task<List<SubmissionDto>> GetAssignmentSubmissionsAsync(Guid assignmentId)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)

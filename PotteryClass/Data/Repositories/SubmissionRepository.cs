@@ -8,7 +8,10 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
 {
     public async Task<Submission?> GetByIdAsync(Guid submissionId)
     {
-        return await db.Submissions.FirstOrDefaultAsync(x => x.Id == submissionId);
+        return await db.Submissions
+            .Include(x => x.Files)
+            .Include(x => x.Student)
+            .FirstOrDefaultAsync(x => x.Id == submissionId);
     }
 
     public async Task SaveChangesAsync()
@@ -41,6 +44,7 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
     {
         return await db.Submissions
             .Include(x => x.Files)
+            .Include(x => x.Student)
             .Where(x => x.AssignmentId == assignmentId)
             .OrderByDescending(x => x.Created)
             .ToListAsync();

@@ -63,6 +63,8 @@ builder.Services.AddScoped<ICourseStudentRepository, CourseStudentRepository>();
 builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 
+builder.Services.AddScoped<IGradeService, GradeService>();
+
 builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("Minio"));
 
 builder.Services.AddSingleton<IFileStorageService>(sp =>
