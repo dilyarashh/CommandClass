@@ -69,6 +69,60 @@ public static class DbSeeder
             context.Users.Add(student);
         }
 
+        var extraStudents = new List<User>();
+
+        for (int i = 1; i <= 10; i++)
+        {
+            var email = $"student{i}@pottery.local";
+
+            var user = await context.Users.FirstOrDefaultAsync(x => x.Email == email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = $"Student{i}",
+                    LastName = "Seeder",
+                    MiddleName = "Test",
+                    Email = email,
+                    Role = UserRole.Student
+                };
+
+                user.PasswordHash = passwordHasher.HashPassword(user, "12345678");
+                context.Users.Add(user);
+            }
+
+            extraStudents.Add(user);
+        }
+
+        var extraTeachers = new List<User>();
+
+        for (int i = 1; i <= 4; i++)
+        {
+            var email = $"teacher{i}@pottery.local";
+
+            var user = await context.Users.FirstOrDefaultAsync(x => x.Email == email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = $"Teacher{i}",
+                    LastName = "Seeder",
+                    MiddleName = "Test",
+                    Email = email,
+                    Role = UserRole.Teacher
+                };
+
+                user.PasswordHash = passwordHasher.HashPassword(user, "12345678");
+                context.Users.Add(user);
+            }
+
+            extraTeachers.Add(user);
+        }
+
         await context.SaveChangesAsync();
 
         const string course1Code = "POTTERY-101";
@@ -116,8 +170,38 @@ public static class DbSeeder
         await AddTeacherIfNotExists(context, course1.Id, teacher.Id, DateTime.UtcNow.AddDays(-19));
         await AddTeacherIfNotExists(context, course2.Id, teacher.Id, DateTime.UtcNow.AddDays(-9));
 
+        await AddTeacherIfNotExists(context, course1.Id, extraTeachers[0].Id, DateTime.UtcNow.AddDays(-18));
+        await AddTeacherIfNotExists(context, course1.Id, extraTeachers[1].Id, DateTime.UtcNow.AddDays(-17));
+
+        await AddTeacherIfNotExists(context, course2.Id, extraTeachers[2].Id, DateTime.UtcNow.AddDays(-7));
+        await AddTeacherIfNotExists(context, course2.Id, extraTeachers[3].Id, DateTime.UtcNow.AddDays(-6));
+
         await AddStudentIfNotExists(context, course1.Id, student.Id, DateTime.UtcNow.AddDays(-18));
         await AddStudentIfNotExists(context, course2.Id, student.Id, DateTime.UtcNow.AddDays(-8));
+
+        await AddStudentIfNotExists(context, course1.Id, extraStudents[0].Id, DateTime.UtcNow.AddDays(-18));
+        await AddStudentIfNotExists(context, course1.Id, extraStudents[1].Id, DateTime.UtcNow.AddDays(-18));
+        await AddStudentIfNotExists(context, course1.Id, extraStudents[2].Id, DateTime.UtcNow.AddDays(-17));
+        await AddStudentIfNotExists(context, course1.Id, extraStudents[3].Id, DateTime.UtcNow.AddDays(-17));
+        await AddStudentIfNotExists(context, course1.Id, extraStudents[4].Id, DateTime.UtcNow.AddDays(-16));
+
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[3].Id, DateTime.UtcNow.AddDays(-8));
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[4].Id, DateTime.UtcNow.AddDays(-8));
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[5].Id, DateTime.UtcNow.AddDays(-7));
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[6].Id, DateTime.UtcNow.AddDays(-7));
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[7].Id, DateTime.UtcNow.AddDays(-6));
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[8].Id, DateTime.UtcNow.AddDays(-6));
+        await AddStudentIfNotExists(context, course2.Id, extraStudents[9].Id, DateTime.UtcNow.AddDays(-5));
+
+        await context.SaveChangesAsync();
+
+        var blockedStudent = await context.CourseStudents
+            .FirstOrDefaultAsync(x => x.UserId == extraStudents[2].Id && x.CourseId == course1.Id);
+
+        if (blockedStudent != null)
+        {
+            blockedStudent.IsBlocked = true;
+        }
 
         await context.SaveChangesAsync();
 
@@ -162,64 +246,6 @@ public static class DbSeeder
             DateTime.UtcNow.AddDays(-1));
 
         await context.SaveChangesAsync();
-
-        await AddCommentIfNotExists(
-            context,
-            assignment1.Id,
-            teacher.Id,
-            "Обратите внимание на влажность глины перед началом работы.",
-            DateTime.UtcNow.AddDays(-4));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment1.Id,
-            student.Id,
-            "Подскажите, пожалуйста, какую глину лучше взять для новичка?",
-            DateTime.UtcNow.AddDays(-3));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment1.Id,
-            admin.Id,
-            "Для старта подойдёт мягкая красная глина, с ней проще работать.",
-            DateTime.UtcNow.AddDays(-2));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment2.Id,
-            student.Id,
-            "Фото нужно прикрепить одним файлом или можно несколько?",
-            DateTime.UtcNow.AddDays(-2).AddHours(2));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment2.Id,
-            teacher.Id,
-            "Можно несколько файлов, если хотите показать процесс и итог.",
-            DateTime.UtcNow.AddDays(-2).AddHours(3));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment3.Id,
-            teacher.Id,
-            "Постарайтесь выбрать 2–3 варианта глазури и сравнить их.",
-            DateTime.UtcNow.AddDays(-1).AddHours(-5));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment3.Id,
-            student.Id,
-            "Можно ли использовать прозрачную глазурь для первого опыта?",
-            DateTime.UtcNow.AddDays(-1).AddHours(-2));
-
-        await AddCommentIfNotExists(
-            context,
-            assignment4.Id,
-            admin.Id,
-            "Эскиз можно сделать от руки, главное — показать пропорции.",
-            DateTime.UtcNow.AddHours(-20));
-
-        await context.SaveChangesAsync();
     }
 
     private static async Task AddTeacherIfNotExists(AppDbContext context, Guid courseId, Guid userId, DateTime createdAtUtc)
@@ -256,7 +282,7 @@ public static class DbSeeder
     }
 
     private static async Task<Assignment> GetOrCreateAssignmentAsync(AppDbContext context, Guid courseId, Guid createdById, string title,
-                                                                        string text, bool requiresSubmission, DateTime? deadline, DateTime created)
+        string text, bool requiresSubmission, DateTime? deadline, DateTime created)
     {
         var existing = await context.Assignments.FirstOrDefaultAsync(x =>
             x.CourseId == courseId &&
@@ -279,25 +305,5 @@ public static class DbSeeder
 
         context.Assignments.Add(assignment);
         return assignment;
-    }
-
-    private static async Task AddCommentIfNotExists(AppDbContext context, Guid assignmentId, Guid userId, string text, DateTime created)
-    {
-        var exists = await context.Comments.AnyAsync(x =>
-            x.AssignmentId == assignmentId &&
-            x.UserId == userId &&
-            x.Text == text);
-
-        if (!exists)
-        {
-            context.Comments.Add(new Comment
-            {
-                Id = Guid.NewGuid(),
-                AssignmentId = assignmentId,
-                UserId = userId,
-                Text = text,
-                Created = created
-            });
-        }
     }
 }
