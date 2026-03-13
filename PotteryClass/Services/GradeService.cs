@@ -120,4 +120,9 @@ public class GradeService(
 
         return await submissionRepo.GetCourseGradesAsync(courseId);
     }
+
+    public async Task<List<MyCourseGradeDto>> GetMyCourseGradesAsync(Guid courseId)
+    {
+        throw new NotImplementedException();
+    }
 }

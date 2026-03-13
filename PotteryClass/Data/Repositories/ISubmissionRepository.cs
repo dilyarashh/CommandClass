@@ -12,4 +12,5 @@ public interface ISubmissionRepository
     Task UpdateAsync(Submission submission);
     Task<List<Submission>> GetByAssignmentAsync(Guid assignmentId);
     Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId);
+    Task<List<MyCourseGradeDto>> GetStudentCourseGradesAsync(Guid courseId, Guid studentId);
 }
