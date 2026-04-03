@@ -11,9 +11,9 @@ namespace PotteryClass.Controllers;
 public class CoursesController(ICourseService service) : ControllerBase
 {
     /// <summary>
-    /// Создать курс (только Admin)
+    /// Создать курс (Admin или Teacher)
     /// </summary>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Teacher")]
     [HttpPost]
     [ProducesResponseType(typeof(CourseDto), 200)]
     public async Task<ActionResult<CourseDto>> Create([FromBody] CreateCourseRequest dto)
@@ -142,9 +142,9 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
-    /// Обновить курс (только Admin)
+    /// Обновить курс (Admin или Teacher курса)
     /// </summary>
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Teacher")]
     [HttpPut("{courseId:guid}")]
     public async Task<IActionResult> UpdateCourse(Guid courseId, [FromBody] UpdateCourseRequest dto)
     {

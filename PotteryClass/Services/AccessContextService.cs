@@ -7,6 +7,23 @@ namespace PotteryClass.Services;
 
 public class AccessContextService(ICurrentUser currentUser) : IAccessContextService
 {
+    private static CourseRegistrationDto BuildRegistration(Course course)
+    {
+        var now = DateTime.UtcNow;
+        var status = now < course.RegistrationStartsAtUtc
+            ? "Upcoming"
+            : now <= course.RegistrationEndsAtUtc
+                ? "Open"
+                : "Closed";
+
+        return new CourseRegistrationDto
+        {
+            OpensAtUtc = course.RegistrationStartsAtUtc,
+            ClosesAtUtc = course.RegistrationEndsAtUtc,
+            Status = status
+        };
+    }
+
     public CourseAccessContextDto BuildCourseAccessContext(Course course)
     {
         var globalRole = currentUser.GetRole();
@@ -44,13 +61,17 @@ public class AccessContextService(ICurrentUser currentUser) : IAccessContextServ
     {
         var access = BuildCourseAccessContext(course);
         var canView = access.IsTeacher || (access.IsStudent && !access.IsBlocked);
+        var now = DateTime.UtcNow;
+        var registrationOpen = course.IsActive &&
+                               now >= course.RegistrationStartsAtUtc &&
+                               now <= course.RegistrationEndsAtUtc;
 
         return new CoursePermissionsDto
         {
             CanView = canView,
-            CanJoin = !access.IsTeacher && !access.IsStudent && course.IsActive,
+            CanJoin = !access.IsTeacher && !access.IsStudent && registrationOpen,
             CanLeave = access.IsStudent || (access.IsTeacher && course.CreatedByUserId != currentUser.GetUserId()),
-            CanEdit = access.GlobalRole == UserRole.Admin,
+            CanEdit = access.IsTeacher,
             CanArchive = access.GlobalRole == UserRole.Admin && course.IsActive,
             CanRestore = access.GlobalRole == UserRole.Admin && !course.IsActive,
             CanManageTeachers = access.GlobalRole == UserRole.Admin,
@@ -103,4 +124,5 @@ public class AccessContextService(ICurrentUser currentUser) : IAccessContextServ
             CanManageSystem = isAdmin
         };
     }
+
 }

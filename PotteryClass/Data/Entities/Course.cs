@@ -9,6 +9,8 @@
 
         public string Code { get; set; } = null!;
         public bool IsActive { get; set; } = true;
+        public DateTime RegistrationStartsAtUtc { get; set; }
+        public DateTime RegistrationEndsAtUtc { get; set; }
 
         public Guid CreatedByUserId { get; set; }
         public DateTime CreatedAtUtc { get; set; }

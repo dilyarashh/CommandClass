@@ -15,16 +15,19 @@ public class CourseService(
     ICourseCodeGenerator codeGen,
     IValidator<CreateCourseRequest> validator,
     IValidator<JoinCourseRequest> joinValidator,
+    IValidator<UpdateCourseRequest> updateValidator,
     IAccessContextService accessContextService)
     : ICourseService
 {
     private readonly IAccessContextService _accessContextService = accessContextService;
+    private readonly IValidator<UpdateCourseRequest> _updateValidator = updateValidator;
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest dto)
     {
-        if (currentUser.GetRole() != UserRole.Admin)
+        if (currentUser.GetRole() != UserRole.Admin &&
+            currentUser.GetRole() != UserRole.Teacher)
         {
-            throw new ForbiddenException("Только администратор может создавать курсы");
+            throw new ForbiddenException("Только администратор или преподаватель может создавать курсы");
         }
 
         var validationResult = await validator.ValidateAsync(dto);
@@ -66,6 +69,8 @@ public class CourseService(
             Description = dto.Description,
             Code = code,
             IsActive = true,
+            RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc,
             CreatedByUserId = userId,
             CreatedAtUtc = now,
             Teachers = new List<CourseTeacher>
@@ -114,6 +119,13 @@ public class CourseService(
             throw new BadRequestException("Курс архивирован");
         }
 
+        var now = DateTime.UtcNow;
+
+        if (now < course.RegistrationStartsAtUtc || now > course.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Регистрация на курс сейчас закрыта");
+        }
+
         var link = await repo.GetStudentLinkAsync(course.Id, userId);
 
         if (link != null)
@@ -150,7 +162,7 @@ public class CourseService(
 
         var result = courses.Select(c =>
         {
-            var isTeacher = c.Teachers.Any(t => t.UserId == userId);
+        var isTeacher = c.Teachers.Any(t => t.UserId == userId);
 
             return new MyCourseDto
             {
@@ -159,6 +171,10 @@ public class CourseService(
                 Description = c.Description,
                 Code = c.Code,
                 IsActive = c.IsActive,
+                CreatedAtUtc = c.CreatedAtUtc,
+                TeacherCount = c.Teachers.Count,
+                StudentCount = c.Students.Count,
+                Registration = BuildRegistration(c),
                 Role = isTeacher ? "Teacher" : "Student",
                 CurrentUser = _accessContextService.BuildCourseAccessContext(c),
                 Permissions = _accessContextService.BuildCoursePermissions(c)
@@ -420,6 +436,12 @@ public class CourseService(
             Description = c.Description,
             Code = c.Code,
             IsActive = c.IsActive,
+            CreatedAtUtc = c.CreatedAtUtc,
+            CreatedByUserId = c.CreatedByUserId,
+            TeacherCount = c.Teachers.Count,
+            StudentCount = c.Students.Count,
+            ActiveStudentCount = c.Students.Count(x => !x.IsBlocked),
+            Registration = BuildRegistration(c),
             CurrentUser = _accessContextService.BuildCourseAccessContext(c),
             Permissions = _accessContextService.BuildCoursePermissions(c)
         }).ToList();
@@ -427,11 +449,6 @@ public class CourseService(
 
     public async Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto)
     {
-        if (currentUser.GetRole() != UserRole.Admin)
-        {
-            throw new ForbiddenException("Только администратор может редактировать курсы");
-        }
-
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
@@ -439,12 +456,51 @@ public class CourseService(
             throw new NotFoundException("Курс не найден");
         }
 
+        var userId = currentUser.GetUserId();
+        var isAdmin = currentUser.GetRole() == UserRole.Admin;
+        var isTeacher = course.Teachers.Any(x => x.UserId == userId);
+
+        if (!isAdmin && !isTeacher)
+        {
+            throw new ForbiddenException("Только администратор или преподаватель курса может редактировать курс");
+        }
+
+        var validationResult = await _updateValidator.ValidateAsync(dto);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray());
+
+            throw new ValidationException(errors);
+        }
+
         if (dto.Name != null)
         {
             course.Name = dto.Name;
         }
 
-        course.Description = dto.Description;
+        if (dto.Description is not null)
+        {
+            course.Description = dto.Description;
+        }
+
+        if (dto.RegistrationStartsAtUtc.HasValue)
+        {
+            course.RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc.Value;
+        }
+
+        if (dto.RegistrationEndsAtUtc.HasValue)
+        {
+            course.RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc.Value;
+        }
+
+        if (course.RegistrationStartsAtUtc >= course.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Дата начала регистрации должна быть раньше даты окончания");
+        }
 
         await repo.SaveChangesAsync();
     }
@@ -536,8 +592,31 @@ public class CourseService(
             Description = course.Description,
             Code = course.Code,
             IsActive = course.IsActive,
+            CreatedAtUtc = course.CreatedAtUtc,
+            CreatedByUserId = course.CreatedByUserId,
+            TeacherCount = course.Teachers.Count,
+            StudentCount = course.Students.Count,
+            ActiveStudentCount = course.Students.Count(x => !x.IsBlocked),
+            Registration = BuildRegistration(course),
             CurrentUser = _accessContextService.BuildCourseAccessContext(course),
             Permissions = _accessContextService.BuildCoursePermissions(course)
+        };
+    }
+
+    private static CourseRegistrationDto BuildRegistration(Course course)
+    {
+        var now = DateTime.UtcNow;
+        var status = now < course.RegistrationStartsAtUtc
+            ? "Upcoming"
+            : now <= course.RegistrationEndsAtUtc
+                ? "Open"
+                : "Closed";
+
+        return new CourseRegistrationDto
+        {
+            OpensAtUtc = course.RegistrationStartsAtUtc,
+            ClosesAtUtc = course.RegistrationEndsAtUtc,
+            Status = status
         };
     }
 }

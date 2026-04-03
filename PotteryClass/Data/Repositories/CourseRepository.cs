@@ -54,6 +54,8 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
 
     public Task<List<Course>> GetAllAsync()
     => db.Courses
+            .Include(x => x.Teachers)
+            .Include(x => x.Students)
             .AsNoTracking()
             .ToListAsync();
 

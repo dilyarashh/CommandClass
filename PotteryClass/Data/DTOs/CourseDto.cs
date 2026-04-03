@@ -7,6 +7,12 @@
         public string? Description { get; init; }
         public string Code { get; init; } = null!;
         public bool IsActive { get; init; }
+        public DateTime CreatedAtUtc { get; init; }
+        public Guid CreatedByUserId { get; init; }
+        public int TeacherCount { get; init; }
+        public int StudentCount { get; init; }
+        public int ActiveStudentCount { get; init; }
+        public CourseRegistrationDto Registration { get; init; } = new();
         public CourseAccessContextDto CurrentUser { get; init; } = new();
         public CoursePermissionsDto Permissions { get; init; } = new();
     }

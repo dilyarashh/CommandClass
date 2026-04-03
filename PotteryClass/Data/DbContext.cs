@@ -38,6 +38,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(x => x.Code).IsUnique();
 
             b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.RegistrationStartsAtUtc).IsRequired();
+            b.Property(x => x.RegistrationEndsAtUtc).IsRequired();
             b.Property(x => x.CreatedByUserId).IsRequired();
             b.Property(x => x.CreatedAtUtc).IsRequired();
         });
