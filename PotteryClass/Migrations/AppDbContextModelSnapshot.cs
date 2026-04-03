@@ -165,12 +165,6 @@ namespace PotteryClass.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<DateTime>("RegistrationEndsAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("RegistrationStartsAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Code")

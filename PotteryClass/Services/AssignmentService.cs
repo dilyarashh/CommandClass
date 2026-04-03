@@ -11,19 +11,15 @@ public class AssignmentService(
     IAssignmentRepository assignmentRepository,
     ICourseTeacherRepository teacherRepository,
     ICourseStudentRepository studentRepository,
-    ICourseRepository courseRepository,
     ICurrentUser currentUser,
-    IFileStorageService fileStorage,
-    IAccessContextService accessContextService)
+    IFileStorageService fileStorage)
     : IAssignmentService
 {
     private readonly IAssignmentRepository _assignmentRepository = assignmentRepository;
     private readonly ICourseTeacherRepository _teacherRepository = teacherRepository;
     private readonly ICourseStudentRepository _studentRepository = studentRepository;
-    private readonly ICourseRepository _courseRepository = courseRepository;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly IFileStorageService _fileStorage = fileStorage;
-    private readonly IAccessContextService _accessContextService = accessContextService;
 
 
     private async Task EnsureTeacherOrAdmin(Guid courseId)
@@ -81,7 +77,7 @@ public class AssignmentService(
 
         await _assignmentRepository.AddAsync(assignment);
 
-        return await MapAsync(assignment);
+        return Map(assignment);
     }
 
     public async Task<AssignmentDto> GetByIdAsync(Guid id)
@@ -91,7 +87,7 @@ public class AssignmentService(
 
         await EnsureCourseMember(assignment.CourseId);
         
-        return await MapAssignmentAsync(assignment);
+        return MapAssignment(assignment);
     }
 
     public async Task<AssignmentDto> UpdateAsync(Guid id, UpdateAssignmentRequest dto)
@@ -115,7 +111,7 @@ public class AssignmentService(
 
         await _assignmentRepository.UpdateAsync(assignment);
 
-        return await MapAsync(assignment);
+        return Map(assignment);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -128,11 +124,8 @@ public class AssignmentService(
         await _assignmentRepository.DeleteAsync(assignment);
     }
 
-    private async Task<AssignmentDto> MapAsync(Assignment assignment)
+    private static AssignmentDto Map(Assignment assignment)
     {
-        var course = await _courseRepository.GetByIdAsync(assignment.CourseId)
-            ?? throw new NotFoundException("Курс не найден");
-
         return new AssignmentDto
         {
             Id = assignment.Id,
@@ -141,8 +134,7 @@ public class AssignmentService(
             Text = assignment.Text,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
-            Created = assignment.Created,
-            Permissions = _accessContextService.BuildAssignmentPermissions(course)
+            Created = assignment.Created
         };
     }
     
@@ -225,18 +217,15 @@ public class AssignmentService(
 
         return new PagedAssignmentResult<AssignmentDto>
         {
-            Items = (await Task.WhenAll(items.Select(MapAssignmentAsync))).ToList(),
+            Items = items.Select(MapAssignment).ToList(),
             Total = total,
             Page = page,
             PageSize = pageSize
         };
     }
     
-    private async Task<AssignmentDto> MapAssignmentAsync(Assignment assignment)
+    private static AssignmentDto MapAssignment(Assignment assignment)
     {
-        var course = await _courseRepository.GetByIdAsync(assignment.CourseId)
-            ?? throw new NotFoundException("Курс не найден");
-
         return new AssignmentDto
         {
             Id = assignment.Id,
@@ -253,8 +242,7 @@ public class AssignmentService(
                 Url = f.Url,
                 MimeType = f.MimeType,
                 Size = f.Size
-            }).ToList(),
-            Permissions = _accessContextService.BuildAssignmentPermissions(course)
+            }).ToList()
         };
     }
 }

@@ -16,10 +16,7 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
         => db.SaveChangesAsync();
 
     public Task<Course?> GetByCodeAsync(string code)
-        => db.Courses
-            .Include(x => x.Teachers)
-            .Include(x => x.Students)
-            .FirstOrDefaultAsync(x => x.Code == code);
+        => db.Courses.FirstOrDefaultAsync(x => x.Code == code);
 
     public Task<CourseStudent?> GetStudentLinkAsync(Guid courseId, Guid userId)
         => db.CourseStudents
@@ -31,8 +28,6 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
     public async Task<List<Course>> GetUserCoursesAsync(Guid userId)
     {
         return await db.Courses
-            .Include(c => c.Teachers)
-            .Include(c => c.Students)
             .Where(c =>
                 c.Teachers.Any(t => t.UserId == userId) ||
                 c.Students.Any(s => s.UserId == userId && !s.IsBlocked))
@@ -54,8 +49,6 @@ public class CourseRepository(AppDbContext db) : ICourseRepository
 
     public Task<List<Course>> GetAllAsync()
     => db.Courses
-            .Include(x => x.Teachers)
-            .Include(x => x.Students)
             .AsNoTracking()
             .ToListAsync();
 

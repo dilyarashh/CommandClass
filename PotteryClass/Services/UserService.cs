@@ -13,14 +13,12 @@ namespace PotteryClass.Services;
 public class UserService(
     IUserRepository userRepository,
     IValidator<RegistrationRequest> userValidator,
-    ICurrentUser currentUser,
-    IAccessContextService accessContextService)
+    ICurrentUser currentUser)
     : IUserService
 {
     private readonly IUserRepository _userRepository = userRepository;
     private readonly IValidator<RegistrationRequest> _userValidator = userValidator;
     private readonly ICurrentUser _currentUser = currentUser;
-    private readonly IAccessContextService _accessContextService = accessContextService;
 
     public async Task<User> CreateUserAsync(RegistrationRequest dto)
     {
@@ -63,9 +61,7 @@ public class UserService(
         var user = await _userRepository.GetByIdAsync(userId)
                    ?? throw new NotFoundException("Пользователь не найден");
 
-        var teachesAnywhere = await _userRepository.IsTeacherAnywhereAsync(userId);
-
-        return Map(user, teachesAnywhere);
+        return Map(user);
     }
     
     public async Task<UserDto> UpdateProfileAsync(UpdateProfileRequest dto)
@@ -94,10 +90,8 @@ public class UserService(
         }
 
         await _userRepository.UpdateAsync(user);
-
-        var teachesAnywhere = await _userRepository.IsTeacherAnywhereAsync(userId);
-
-        return Map(user, teachesAnywhere);
+        
+        return Map(user);
     }
     
     public async Task DeleteCurrentUserAsync()
@@ -115,22 +109,17 @@ public class UserService(
         var user = await _userRepository.GetByIdAsync(id)
                    ?? throw new NotFoundException("Пользователь не найден");
 
-        var teachesAnywhere = await _userRepository.IsTeacherAnywhereAsync(user.Id);
-
-        return Map(user, teachesAnywhere);
+        return Map(user);
     }
 
     public async Task<PagedResult<UserDto>> GetAllAsync(UsersQuery query)
     {
         var result = await _userRepository.GetAllAsync(query);
-        var teacherIds = await _userRepository.GetTeacherIdsAsync(result.Items.Select(x => x.Id));
 
         return new PagedResult<UserDto>
         {
             TotalCount = result.TotalCount,
-            Items = result.Items
-                .Select(user => Map(user, teacherIds.Contains(user.Id)))
-                .ToList()
+            Items = result.Items.Select(Map).ToList()
         };
     }
 
@@ -145,37 +134,25 @@ public class UserService(
         {
             return new UserRoleDto
             {
-                GlobalRole = UserRole.Admin,
-                EffectiveRole = UserRole.Admin,
-                Permissions = _accessContextService.BuildUserPermissions(UserRole.Admin)
+                Role = UserRole.Admin
             };
         }
 
         var isTeacher = await _userRepository.IsTeacherAnywhereAsync(userId);
-        var effectiveRole = _accessContextService.GetEffectiveRole(user.Role, isTeacher);
 
         return new UserRoleDto
         {
-            GlobalRole = user.Role,
-            EffectiveRole = effectiveRole,
-            Permissions = _accessContextService.BuildUserPermissions(effectiveRole)
+            Role = isTeacher ? UserRole.Teacher : UserRole.Student
         };
     }
 
-    private UserDto Map(User user, bool teachesAnywhere)
+    private static UserDto Map(User user) => new()
     {
-        var effectiveRole = _accessContextService.GetEffectiveRole(user.Role, teachesAnywhere);
-
-        return new UserDto
-        {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            MiddleName = user.MiddleName,
-            Email = user.Email,
-            Role = user.Role,
-            EffectiveRole = effectiveRole,
-            Permissions = _accessContextService.BuildUserPermissions(effectiveRole)
-        };
-    }
+        Id = user.Id,
+        FirstName = user.FirstName,
+        LastName = user.LastName,
+        MiddleName = user.MiddleName,
+        Email = user.Email,
+        Role = user.Role
+    };
 }

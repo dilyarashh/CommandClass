@@ -14,20 +14,14 @@ public class CourseService(
     ICurrentUser currentUser,
     ICourseCodeGenerator codeGen,
     IValidator<CreateCourseRequest> validator,
-    IValidator<JoinCourseRequest> joinValidator,
-    IValidator<UpdateCourseRequest> updateValidator,
-    IAccessContextService accessContextService)
+    IValidator<JoinCourseRequest> joinValidator)
     : ICourseService
 {
-    private readonly IAccessContextService _accessContextService = accessContextService;
-    private readonly IValidator<UpdateCourseRequest> _updateValidator = updateValidator;
-
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest dto)
     {
-        if (currentUser.GetRole() != UserRole.Admin &&
-            currentUser.GetRole() != UserRole.Teacher)
+        if (currentUser.GetRole() != UserRole.Admin)
         {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РёР»Рё РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РјРѕР¶РµС‚ СЃРѕР·РґР°РІР°С‚СЊ РєСѓСЂСЃС‹");
+            throw new ForbiddenException("Только администратор может создавать курсы");
         }
 
         var validationResult = await validator.ValidateAsync(dto);
@@ -52,7 +46,7 @@ public class CourseService(
             attempts++;
             if (attempts > 10)
             {
-                throw new BadRequestException("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ СѓРЅРёРєР°Р»СЊРЅС‹Р№ РєРѕРґ РєСѓСЂСЃР°");
+                throw new BadRequestException("Не удалось сгенерировать уникальный код курса");
             }
 
             code = codeGen.Generate();
@@ -69,8 +63,6 @@ public class CourseService(
             Description = dto.Description,
             Code = code,
             IsActive = true,
-            RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc,
-            RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc,
             CreatedByUserId = userId,
             CreatedAtUtc = now,
             Teachers = new List<CourseTeacher>
@@ -87,7 +79,14 @@ public class CourseService(
         await repo.AddAsync(course);
         await repo.SaveChangesAsync();
 
-        return MapCourse(course);
+        return new CourseDto
+        {
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            Code = course.Code,
+            IsActive = course.IsActive
+        };
     }
 
     public async Task<CourseDto> JoinCourseAsync(JoinCourseRequest dto)
@@ -111,19 +110,12 @@ public class CourseService(
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         if (!course.IsActive)
         {
-            throw new BadRequestException("РљСѓСЂСЃ Р°СЂС…РёРІРёСЂРѕРІР°РЅ");
-        }
-
-        var now = DateTime.UtcNow;
-
-        if (now < course.RegistrationStartsAtUtc || now > course.RegistrationEndsAtUtc)
-        {
-            throw new BadRequestException("Р РµРіРёСЃС‚СЂР°С†РёСЏ РЅР° РєСѓСЂСЃ СЃРµР№С‡Р°СЃ Р·Р°РєСЂС‹С‚Р°");
+            throw new BadRequestException("Курс архивирован");
         }
 
         var link = await repo.GetStudentLinkAsync(course.Id, userId);
@@ -132,10 +124,17 @@ public class CourseService(
         {
             if (link.IsBlocked)
             {
-                throw new ForbiddenException("Р’С‹ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РЅР° РєСѓСЂСЃРµ");
+                throw new ForbiddenException("Вы заблокированы на курсе");
             }
 
-            return MapCourse(course);
+            return new CourseDto
+            {
+                Id = course.Id,
+                Name = course.Name,
+                Description = course.Description,
+                Code = course.Code,
+                IsActive = course.IsActive
+            };
         }
 
         var student = new CourseStudent
@@ -149,9 +148,14 @@ public class CourseService(
         await repo.AddStudentAsync(student);
         await repo.SaveChangesAsync();
 
-        course.Students.Add(student);
-
-        return MapCourse(course);
+        return new CourseDto
+        {
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            Code = course.Code,
+            IsActive = course.IsActive
+        };
     }
 
     public async Task<List<MyCourseDto>> GetMyCoursesAsync(MyCoursesFilter filter)
@@ -162,7 +166,7 @@ public class CourseService(
 
         var result = courses.Select(c =>
         {
-        var isTeacher = c.Teachers.Any(t => t.UserId == userId);
+            var isTeacher = c.Teachers.Any(t => t.UserId == userId);
 
             return new MyCourseDto
             {
@@ -171,13 +175,7 @@ public class CourseService(
                 Description = c.Description,
                 Code = c.Code,
                 IsActive = c.IsActive,
-                CreatedAtUtc = c.CreatedAtUtc,
-                TeacherCount = c.Teachers.Count,
-                StudentCount = c.Students.Count,
-                Registration = BuildRegistration(c),
-                Role = isTeacher ? "Teacher" : "Student",
-                CurrentUser = _accessContextService.BuildCourseAccessContext(c),
-                Permissions = _accessContextService.BuildCoursePermissions(c)
+                Role = isTeacher ? "Teacher" : "Student"
             };
         });
 
@@ -198,7 +196,7 @@ public class CourseService(
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         var isTeacher = course.Teachers.Any(t => t.UserId == userId);
@@ -208,19 +206,24 @@ public class CourseService(
 
         var isStudent = studentLink != null;
 
-        var isAdmin = currentUser.GetRole() == UserRole.Admin;
-
-        if (!isAdmin && !isTeacher && !isStudent)
+        if (!isTeacher && !isStudent)
         {
-            throw new ForbiddenException("Р’С‹ РЅРµ СЃРѕСЃС‚РѕРёС‚Рµ РІ СЌС‚РѕРј РєСѓСЂСЃРµ");
+            throw new ForbiddenException("Вы не состоите в этом курсе");
         }
 
         if (studentLink?.IsBlocked == true)
         {
-            throw new ForbiddenException("Р’С‹ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РЅР° РєСѓСЂСЃРµ");
+            throw new ForbiddenException("Вы заблокированы на курсе");
         }
 
-        return MapCourse(course);
+        return new CourseDto
+        {
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            Code = course.Code,
+            IsActive = course.IsActive
+        };
     }
 
     public async Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId)
@@ -231,14 +234,14 @@ public class CourseService(
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         var isTeacher = course.Teachers.Any(t => t.UserId == userId);
 
         if (!isTeacher)
         {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РјРѕР¶РµС‚ СЃРјРѕС‚СЂРµС‚СЊ СЃРїРёСЃРѕРє СЃС‚СѓРґРµРЅС‚РѕРІ");
+            throw new ForbiddenException("Только преподаватель может смотреть список студентов");
         }
 
         var students = await repo.GetCourseStudentsAsync(courseId);
@@ -260,20 +263,20 @@ public class CourseService(
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
 
         var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
 
         if (!isTeacher)
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РєСѓСЂСЃР° РјРѕР¶РµС‚ Р±Р»РѕРєРёСЂРѕРІР°С‚СЊ СЃС‚СѓРґРµРЅС‚РѕРІ");
+            throw new ForbiddenException("Только преподаватель курса может блокировать студентов");
 
         var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
 
         if (student == null)
-            throw new NotFoundException("РЎС‚СѓРґРµРЅС‚ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Студент не найден");
 
         if (student.IsBlocked)
-            throw new BadRequestException("РЎС‚СѓРґРµРЅС‚ СѓР¶Рµ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ");
+            throw new BadRequestException("Студент уже заблокирован");
 
         student.IsBlocked = true;
 
@@ -287,20 +290,20 @@ public class CourseService(
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
 
         var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
 
         if (!isTeacher)
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РєСѓСЂСЃР° РјРѕР¶РµС‚ СЂР°Р·Р±Р»РѕРєРёСЂРѕРІР°С‚СЊ СЃС‚СѓРґРµРЅС‚РѕРІ");
+            throw new ForbiddenException("Только преподаватель курса может разблокировать студентов");
 
         var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
 
         if (student == null)
-            throw new NotFoundException("РЎС‚СѓРґРµРЅС‚ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Студент не найден");
 
         if (!student.IsBlocked)
-            throw new BadRequestException("РЎС‚СѓРґРµРЅС‚ РЅРµ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ");
+            throw new BadRequestException("Студент не заблокирован");
 
         student.IsBlocked = false;
 
@@ -311,21 +314,21 @@ public class CourseService(
     {
         if (currentUser.GetRole() != UserRole.Admin)
         {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ РЅР°Р·РЅР°С‡Р°С‚СЊ РїСЂРµРїРѕРґР°РІР°С‚РµР»РµР№");
+            throw new ForbiddenException("Только администратор может назначать преподавателей");
         }    
 
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         var alreadyTeacher = course.Teachers.Any(t => t.UserId == teacherId);
 
         if (alreadyTeacher)
         {
-            throw new BadRequestException("РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СѓР¶Рµ СЏРІР»СЏРµС‚СЃСЏ РїСЂРµРїРѕРґР°РІР°С‚РµР»РµРј РєСѓСЂСЃР°");
+            throw new BadRequestException("Пользователь уже является преподавателем курса");
         }
 
         course.Teachers.Add(new CourseTeacher
@@ -342,31 +345,31 @@ public class CourseService(
     {
         if (currentUser.GetRole() != UserRole.Admin)
         {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ СѓРґР°Р»СЏС‚СЊ РїСЂРµРїРѕРґР°РІР°С‚РµР»РµР№");
+            throw new ForbiddenException("Только администратор может удалять преподавателей");
         }
 
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         var teacher = course.Teachers.FirstOrDefault(t => t.UserId == teacherId);
 
         if (teacher == null)
         {
-            throw new NotFoundException("РџСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ РЅР° РєСѓСЂСЃРµ");
+            throw new NotFoundException("Преподаватель не найден на курсе");
         }
 
         if (course.CreatedByUserId == teacherId)
         {
-            throw new BadRequestException("РќРµР»СЊР·СЏ СѓРґР°Р»РёС‚СЊ СЃРѕР·РґР°С‚РµР»СЏ РєСѓСЂСЃР°");
+            throw new BadRequestException("Нельзя удалить создателя курса");
         }
 
         if (course.Teachers.Count == 1)
         {
-            throw new BadRequestException("РќРµР»СЊР·СЏ СѓРґР°Р»РёС‚СЊ РїРѕСЃР»РµРґРЅРµРіРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЏ РєСѓСЂСЃР°");
+            throw new BadRequestException("Нельзя удалить последнего преподавателя курса");
         }
 
         course.Teachers.Remove(teacher);
@@ -378,19 +381,19 @@ public class CourseService(
     {
         if (currentUser.GetRole() != UserRole.Admin)
         {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ Р°СЂС…РёРІРёСЂРѕРІР°С‚СЊ РєСѓСЂСЃС‹");
+            throw new ForbiddenException("Только администратор может архивировать курсы");
         }
 
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         if (!course.IsActive)
         {
-            throw new BadRequestException("РљСѓСЂСЃ СѓР¶Рµ Р°СЂС…РёРІРёСЂРѕРІР°РЅ");
+            throw new BadRequestException("Курс уже архивирован");
         }
 
         course.IsActive = false;
@@ -402,19 +405,19 @@ public class CourseService(
     {
         if (currentUser.GetRole() != UserRole.Admin)
         {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ СЂР°Р·Р°СЂС…РёРІРёСЂРѕРІР°С‚СЊ РєСѓСЂСЃС‹");
+            throw new ForbiddenException("Только администратор может разархивировать курсы");
         }
 
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         if (course.IsActive)
         {
-            throw new BadRequestException("РљСѓСЂСЃ СѓР¶Рµ Р°РєС‚РёРІРµРЅ");
+            throw new BadRequestException("Курс уже активен");
         }
 
         course.IsActive = true;
@@ -425,7 +428,7 @@ public class CourseService(
     public async Task<List<CourseDto>> GetAllCoursesAsync()
     {
         if (currentUser.GetRole() != UserRole.Admin)
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ СЃРјРѕС‚СЂРµС‚СЊ РІСЃРµ РєСѓСЂСЃС‹");
+            throw new ForbiddenException("Только администратор может смотреть все курсы");
 
         var courses = await repo.GetAllAsync();
 
@@ -435,46 +438,22 @@ public class CourseService(
             Name = c.Name,
             Description = c.Description,
             Code = c.Code,
-            IsActive = c.IsActive,
-            CreatedAtUtc = c.CreatedAtUtc,
-            CreatedByUserId = c.CreatedByUserId,
-            TeacherCount = c.Teachers.Count,
-            StudentCount = c.Students.Count,
-            ActiveStudentCount = c.Students.Count(x => !x.IsBlocked),
-            Registration = BuildRegistration(c),
-            CurrentUser = _accessContextService.BuildCourseAccessContext(c),
-            Permissions = _accessContextService.BuildCoursePermissions(c)
+            IsActive = c.IsActive
         }).ToList();
     }
 
     public async Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto)
     {
+        if (currentUser.GetRole() != UserRole.Admin)
+        {
+            throw new ForbiddenException("Только администратор может редактировать курсы");
+        }
+
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
-        }
-
-        var userId = currentUser.GetUserId();
-        var isAdmin = currentUser.GetRole() == UserRole.Admin;
-        var isTeacher = course.Teachers.Any(x => x.UserId == userId);
-
-        if (!isAdmin && !isTeacher)
-        {
-            throw new ForbiddenException("РўРѕР»СЊРєРѕ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РёР»Рё РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РєСѓСЂСЃР° РјРѕР¶РµС‚ СЂРµРґР°РєС‚РёСЂРѕРІР°С‚СЊ РєСѓСЂСЃ");
-        }
-
-        var validationResult = await _updateValidator.ValidateAsync(dto);
-        if (!validationResult.IsValid)
-        {
-            var errors = validationResult.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray());
-
-            throw new ValidationException(errors);
+            throw new NotFoundException("Курс не найден");
         }
 
         if (dto.Name != null)
@@ -482,25 +461,7 @@ public class CourseService(
             course.Name = dto.Name;
         }
 
-        if (dto.Description is not null)
-        {
-            course.Description = dto.Description;
-        }
-
-        if (dto.RegistrationStartsAtUtc.HasValue)
-        {
-            course.RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc.Value;
-        }
-
-        if (dto.RegistrationEndsAtUtc.HasValue)
-        {
-            course.RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc.Value;
-        }
-
-        if (course.RegistrationStartsAtUtc >= course.RegistrationEndsAtUtc)
-        {
-            throw new BadRequestException("Р”Р°С‚Р° РЅР°С‡Р°Р»Р° СЂРµРіРёСЃС‚СЂР°С†РёРё РґРѕР»Р¶РЅР° Р±С‹С‚СЊ СЂР°РЅСЊС€Рµ РґР°С‚С‹ РѕРєРѕРЅС‡Р°РЅРёСЏ");
-        }
+        course.Description = dto.Description;
 
         await repo.SaveChangesAsync();
     }
@@ -513,12 +474,12 @@ public class CourseService(
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         if (course.CreatedByUserId == userId)
         {
-            throw new BadRequestException("РЎРѕР·РґР°С‚РµР»СЊ РєСѓСЂСЃР° РЅРµ РјРѕР¶РµС‚ РїРѕРєРёРЅСѓС‚СЊ РєСѓСЂСЃ");
+            throw new BadRequestException("Создатель курса не может покинуть курс");
         }
 
         var student = course.Students.FirstOrDefault(x => x.UserId == userId);
@@ -526,7 +487,7 @@ public class CourseService(
 
         if (student == null && teacher == null)
         {
-            throw new BadRequestException("РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ СЃРѕСЃС‚РѕРёС‚ РІ РєСѓСЂСЃРµ");
+            throw new BadRequestException("Пользователь не состоит в курсе");
         }
 
         if (student != null)
@@ -540,7 +501,7 @@ public class CourseService(
         {
             if (course.Teachers.Count == 1)
             {
-                throw new BadRequestException("РќРµР»СЊР·СЏ РїРѕРєРёРЅСѓС‚СЊ РєСѓСЂСЃ вЂ” РІС‹ РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ");
+                throw new BadRequestException("Нельзя покинуть курс — вы единственный преподаватель");
             }
 
             course.Teachers.Remove(teacher);
@@ -557,18 +518,16 @@ public class CourseService(
 
         if (course == null)
         {
-            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Курс не найден");
         }
 
         var isTeacher = course.Teachers.Any(t => t.UserId == userId);
 
         var isStudent = course.Students.Any(s => s.UserId == userId);
 
-        var isAdmin = currentUser.GetRole() == UserRole.Admin;
-
-        if (!isAdmin && !isTeacher && !isStudent)
+        if (!isTeacher && !isStudent)
         {
-            throw new ForbiddenException("Р’С‹ РЅРµ СЃРѕСЃС‚РѕРёС‚Рµ РІ СЌС‚РѕРј РєСѓСЂСЃРµ");
+            throw new ForbiddenException("Вы не состоите в этом курсе");
         }
 
         var teachers = await repo.GetCourseTeachersAsync(courseId);
@@ -581,42 +540,5 @@ public class CourseService(
             Email = t.Email,
             Role = t.Role
         }).ToList();
-    }
-
-    private CourseDto MapCourse(Course course)
-    {
-        return new CourseDto
-        {
-            Id = course.Id,
-            Name = course.Name,
-            Description = course.Description,
-            Code = course.Code,
-            IsActive = course.IsActive,
-            CreatedAtUtc = course.CreatedAtUtc,
-            CreatedByUserId = course.CreatedByUserId,
-            TeacherCount = course.Teachers.Count,
-            StudentCount = course.Students.Count,
-            ActiveStudentCount = course.Students.Count(x => !x.IsBlocked),
-            Registration = BuildRegistration(course),
-            CurrentUser = _accessContextService.BuildCourseAccessContext(course),
-            Permissions = _accessContextService.BuildCoursePermissions(course)
-        };
-    }
-
-    private static CourseRegistrationDto BuildRegistration(Course course)
-    {
-        var now = DateTime.UtcNow;
-        var status = now < course.RegistrationStartsAtUtc
-            ? "Upcoming"
-            : now <= course.RegistrationEndsAtUtc
-                ? "Open"
-                : "Closed";
-
-        return new CourseRegistrationDto
-        {
-            OpensAtUtc = course.RegistrationStartsAtUtc,
-            ClosesAtUtc = course.RegistrationEndsAtUtc,
-            Status = status
-        };
     }
 }

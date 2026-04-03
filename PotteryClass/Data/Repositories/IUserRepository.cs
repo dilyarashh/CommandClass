@@ -12,5 +12,4 @@ public interface IUserRepository
     Task DeleteAsync(User user);
     Task<PagedResult<User>> GetAllAsync(UsersQuery query);
     Task<bool> IsTeacherAnywhereAsync(Guid userId);
-    Task<HashSet<Guid>> GetTeacherIdsAsync(IEnumerable<Guid> userIds);
 }
