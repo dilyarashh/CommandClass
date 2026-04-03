@@ -88,4 +88,17 @@ public class UserRepository(AppDbContext db) : IUserRepository
     {
         return await db.CourseTeachers.AnyAsync(x => x.UserId == userId);
     }
+
+    public async Task<HashSet<Guid>> GetTeacherIdsAsync(IEnumerable<Guid> userIds)
+    {
+        var ids = userIds.ToList();
+
+        var teacherIds = await db.CourseTeachers
+            .Where(x => ids.Contains(x.UserId))
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        return teacherIds.ToHashSet();
+    }
 }

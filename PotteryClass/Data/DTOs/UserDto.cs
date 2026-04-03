@@ -10,4 +10,6 @@ public class UserDto
     public required  string MiddleName { get; set; }
     public required string Email { get; set; } 
     public UserRole Role { get; set; }
+    public UserRole EffectiveRole { get; set; }
+    public UserPermissionsDto Permissions { get; set; } = new();
 }

@@ -13,4 +13,8 @@ public class MyCourseDto
     public bool IsActive { get; set; }
 
     public string Role { get; set; } = default!;
+
+    public CourseAccessContextDto CurrentUser { get; set; } = new();
+
+    public CoursePermissionsDto Permissions { get; set; } = new();
 }

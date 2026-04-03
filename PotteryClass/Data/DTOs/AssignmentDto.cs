@@ -17,4 +17,6 @@ public class AssignmentDto
     public DateTime Created { get; set; }
     
     public List<AssignmentFileDto> Files { get; set; } = new();
+
+    public AssignmentPermissionsDto Permissions { get; set; } = new();
 }

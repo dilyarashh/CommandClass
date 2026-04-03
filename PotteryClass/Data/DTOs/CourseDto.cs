@@ -7,5 +7,7 @@
         public string? Description { get; init; }
         public string Code { get; init; } = null!;
         public bool IsActive { get; init; }
+        public CourseAccessContextDto CurrentUser { get; init; } = new();
+        public CoursePermissionsDto Permissions { get; init; } = new();
     }
 }

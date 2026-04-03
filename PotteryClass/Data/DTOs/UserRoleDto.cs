@@ -4,5 +4,7 @@ namespace PotteryClass.Data.DTOs;
 
 public class UserRoleDto
 {
-    public UserRole Role { get; set; }
+    public UserRole GlobalRole { get; set; }
+    public UserRole EffectiveRole { get; set; }
+    public UserPermissionsDto Permissions { get; set; } = new();
 }
