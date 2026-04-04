@@ -77,6 +77,17 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
+    /// Удалить студента с курса (преподаватель или администратор)
+    /// </summary>
+    [Authorize(Roles = "Admin,Teacher")]
+    [HttpDelete("{courseId:guid}/students/{studentId:guid}")]
+    public async Task<IActionResult> RemoveStudent(Guid courseId, Guid studentId)
+    {
+        await service.RemoveStudentAsync(courseId, studentId);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Заблокировать студента по его айди и айди курса (только преподаватель)
     /// </summary>
     [HttpPatch("{courseId:guid}/students/{studentId:guid}/block")]

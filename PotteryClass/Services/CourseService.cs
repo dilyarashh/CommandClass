@@ -315,6 +315,24 @@ public class CourseService(
         await repo.SaveChangesAsync();
     }
 
+    public async Task RemoveStudentAsync(Guid courseId, Guid studentId)
+    {
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+            throw new NotFoundException("Курс не найден");
+
+        await EnsureTeacherOrAdmin(course);
+
+        var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
+
+        if (student == null)
+            throw new NotFoundException("Студент не найден на курсе");
+
+        course.Students.Remove(student);
+        await repo.SaveChangesAsync();
+    }
+
     public async Task BlockStudentAsync(Guid courseId, Guid studentId)
     {
         var teacherId = currentUser.GetUserId();
