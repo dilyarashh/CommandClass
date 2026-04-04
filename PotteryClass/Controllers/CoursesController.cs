@@ -66,6 +66,28 @@ public class CoursesController(ICourseService service) : ControllerBase
     }
 
     /// <summary>
+    /// Добавить студента на курс вручную (преподаватель или администратор)
+    /// </summary>
+    [Authorize(Roles = "Admin,Teacher")]
+    [HttpPost("{courseId:guid}/students/{studentId:guid}")]
+    public async Task<IActionResult> AddStudent(Guid courseId, Guid studentId)
+    {
+        await service.AddStudentAsync(courseId, studentId);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Удалить студента с курса (преподаватель или администратор)
+    /// </summary>
+    [Authorize(Roles = "Admin,Teacher")]
+    [HttpDelete("{courseId:guid}/students/{studentId:guid}")]
+    public async Task<IActionResult> RemoveStudent(Guid courseId, Guid studentId)
+    {
+        await service.RemoveStudentAsync(courseId, studentId);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Заблокировать студента по его айди и айди курса (только преподаватель)
     /// </summary>
     [HttpPatch("{courseId:guid}/students/{studentId:guid}/block")]

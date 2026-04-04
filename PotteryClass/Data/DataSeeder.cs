@@ -138,6 +138,8 @@ public static class DbSeeder
                 Description = "Базовый курс по лепке и работе на гончарном круге",
                 Code = course1Code,
                 IsActive = true,
+                RegistrationStartsAtUtc = DateTime.UtcNow.AddDays(-30),
+                RegistrationEndsAtUtc = DateTime.UtcNow.AddDays(30),
                 CreatedByUserId = admin.Id,
                 CreatedAtUtc = DateTime.UtcNow.AddDays(-20)
             };
@@ -155,6 +157,8 @@ public static class DbSeeder
                 Description = "Курс по сложным техникам глазурования и обжига",
                 Code = course2Code,
                 IsActive = true,
+                RegistrationStartsAtUtc = DateTime.UtcNow.AddDays(-20),
+                RegistrationEndsAtUtc = DateTime.UtcNow.AddDays(20),
                 CreatedByUserId = admin.Id,
                 CreatedAtUtc = DateTime.UtcNow.AddDays(-10)
             };

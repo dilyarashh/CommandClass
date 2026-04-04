@@ -4,5 +4,7 @@
     {
         public string Name { get; init; } = null!;
         public string? Description { get; init; }
+        public DateTime RegistrationStartsAtUtc { get; init; }
+        public DateTime RegistrationEndsAtUtc { get; init; }
     }
 }

@@ -13,10 +13,27 @@ public class CourseService(
     ICourseRepository repo,
     ICurrentUser currentUser,
     ICourseCodeGenerator codeGen,
+    IUserRepository userRepository,
     IValidator<CreateCourseRequest> validator,
     IValidator<JoinCourseRequest> joinValidator)
     : ICourseService
 {
+    private Task EnsureTeacherOrAdmin(Course course)
+    {
+        var role = currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return Task.CompletedTask;
+
+        var userId = currentUser.GetUserId();
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        if (!isTeacher)
+            throw new ForbiddenException("Только преподаватель курса или администратор может выполнять это действие");
+
+        return Task.CompletedTask;
+    }
+
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest dto)
     {
         if (currentUser.GetRole() != UserRole.Admin)
@@ -56,6 +73,11 @@ public class CourseService(
         var now = DateTime.UtcNow;
         var courseId = Guid.NewGuid();
 
+        if (dto.RegistrationStartsAtUtc >= dto.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Дата начала регистрации должна быть раньше даты окончания");
+        }
+
         var course = new Course
         {
             Id = courseId,
@@ -63,6 +85,8 @@ public class CourseService(
             Description = dto.Description,
             Code = code,
             IsActive = true,
+            RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc,
             CreatedByUserId = userId,
             CreatedAtUtc = now,
             Teachers = new List<CourseTeacher>
@@ -85,7 +109,9 @@ public class CourseService(
             Name = course.Name,
             Description = course.Description,
             Code = course.Code,
-            IsActive = course.IsActive
+            IsActive = course.IsActive,
+            RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
         };
     }
 
@@ -118,6 +144,12 @@ public class CourseService(
             throw new BadRequestException("Курс архивирован");
         }
 
+        var now = DateTime.UtcNow;
+        if (now < course.RegistrationStartsAtUtc || now > course.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Регистрация на курс закрыта");
+        }
+
         var link = await repo.GetStudentLinkAsync(course.Id, userId);
 
         if (link != null)
@@ -133,7 +165,9 @@ public class CourseService(
                 Name = course.Name,
                 Description = course.Description,
                 Code = course.Code,
-                IsActive = course.IsActive
+                IsActive = course.IsActive,
+                RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+                RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
             };
         }
 
@@ -154,7 +188,9 @@ public class CourseService(
             Name = course.Name,
             Description = course.Description,
             Code = course.Code,
-            IsActive = course.IsActive
+            IsActive = course.IsActive,
+            RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
         };
     }
 
@@ -175,6 +211,8 @@ public class CourseService(
                 Description = c.Description,
                 Code = c.Code,
                 IsActive = c.IsActive,
+                RegistrationStartsAtUtc = c.RegistrationStartsAtUtc,
+                RegistrationEndsAtUtc = c.RegistrationEndsAtUtc,
                 Role = isTeacher ? "Teacher" : "Student"
             };
         });
@@ -222,7 +260,9 @@ public class CourseService(
             Name = course.Name,
             Description = course.Description,
             Code = course.Code,
-            IsActive = course.IsActive
+            IsActive = course.IsActive,
+            RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
         };
     }
 
@@ -255,6 +295,65 @@ public class CourseService(
             Email = x.User.Email,
             IsBlocked = x.IsBlocked
         }).ToList();
+    }
+
+    public async Task AddStudentAsync(Guid courseId, Guid studentId)
+    {
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+            throw new NotFoundException("Курс не найден");
+
+        await EnsureTeacherOrAdmin(course);
+
+        var user = await userRepository.GetByIdAsync(studentId);
+
+        if (user == null)
+            throw new NotFoundException("Пользователь не найден");
+
+        if (user.Role != UserRole.Student)
+            throw new BadRequestException("На курс можно добавить только студента");
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == studentId);
+        if (isTeacher)
+            throw new BadRequestException("Пользователь уже является преподавателем этого курса");
+
+        var existingStudent = course.Students.FirstOrDefault(s => s.UserId == studentId);
+        if (existingStudent != null)
+        {
+            if (existingStudent.IsBlocked)
+                throw new BadRequestException("Студент уже добавлен на курс, но заблокирован");
+
+            throw new BadRequestException("Студент уже добавлен на курс");
+        }
+
+        await repo.AddStudentAsync(new CourseStudent
+        {
+            CourseId = courseId,
+            UserId = studentId,
+            CreatedAtUtc = DateTime.UtcNow,
+            IsBlocked = false
+        });
+
+        await repo.SaveChangesAsync();
+    }
+
+    public async Task RemoveStudentAsync(Guid courseId, Guid studentId)
+    {
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+            throw new NotFoundException("Курс не найден");
+
+        await EnsureTeacherOrAdmin(course);
+
+        var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
+
+        if (student == null)
+            throw new NotFoundException("Студент не найден на курсе");
+
+        course.Students.Remove(student);
+        await repo.SaveChangesAsync();
     }
 
     public async Task BlockStudentAsync(Guid courseId, Guid studentId)
@@ -441,7 +540,9 @@ public class CourseService(
             Name = c.Name,
             Description = c.Description,
             Code = c.Code,
-            IsActive = c.IsActive
+            IsActive = c.IsActive,
+            RegistrationStartsAtUtc = c.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = c.RegistrationEndsAtUtc
         }).ToList();
     }
 
@@ -465,6 +566,13 @@ public class CourseService(
         }
 
         course.Description = dto.Description;
+        course.RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc;
+        course.RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc;
+
+        if (course.RegistrationStartsAtUtc >= course.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Дата начала регистрации должна быть раньше даты окончания");
+        }
 
         await repo.SaveChangesAsync();
     }

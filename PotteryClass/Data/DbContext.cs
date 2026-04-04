@@ -38,6 +38,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(x => x.Code).IsUnique();
 
             b.Property(x => x.IsActive).IsRequired();
+            b.Property(x => x.RegistrationStartsAtUtc).IsRequired();
+            b.Property(x => x.RegistrationEndsAtUtc).IsRequired();
             b.Property(x => x.CreatedByUserId).IsRequired();
             b.Property(x => x.CreatedAtUtc).IsRequired();
         });
@@ -71,6 +73,65 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.Property(x => x.IsBlocked).IsRequired();
             b.Property(x => x.CreatedAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<Assignment>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Title).IsRequired();
+            b.Property(x => x.Text).IsRequired();
+            b.Property(x => x.Created).IsRequired();
+            b.Property(x => x.RequiresSubmission).IsRequired();
+        });
+
+        modelBuilder.Entity<AssignmentFile>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.Files)
+                .HasForeignKey(x => x.AssignmentId);
+        });
+
+        modelBuilder.Entity<Comment>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Text).IsRequired();
+            b.Property(x => x.Created).IsRequired();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.Comments)
+                .HasForeignKey(x => x.AssignmentId);
+
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<Submission>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Created).IsRequired();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.Submissions)
+                .HasForeignKey(x => x.AssignmentId);
+
+            b.HasOne(x => x.Student)
+                .WithMany()
+                .HasForeignKey(x => x.StudentId);
+        });
+
+        modelBuilder.Entity<SubmissionFile>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.HasOne(x => x.Submission)
+                .WithMany(x => x.Files)
+                .HasForeignKey(x => x.SubmissionId);
         });
     }
 }

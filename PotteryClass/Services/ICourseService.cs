@@ -15,6 +15,10 @@ public interface ICourseService
 
     Task<List<CourseStudentDto>> GetCourseStudentsAsync(Guid courseId);
 
+    Task AddStudentAsync(Guid courseId, Guid studentId);
+
+    Task RemoveStudentAsync(Guid courseId, Guid studentId);
+
     Task BlockStudentAsync(Guid courseId, Guid studentId);
 
     Task UnblockStudentAsync(Guid courseId, Guid studentId);
