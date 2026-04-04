@@ -1,4 +1,5 @@
 using PotteryClass.Data.DTOs;
+using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Infrastructure.Errors.Exceptions;
@@ -18,30 +19,31 @@ public class GradeService(
 
         if (submission == null)
         {
-            throw new NotFoundException("Решение не найдено");
+            throw new NotFoundException("Р РµС€РµРЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
         }
 
         var assignment = await assignmentRepo.GetByIdAsync(submission.AssignmentId);
 
         if (assignment == null)
         {
-            throw new NotFoundException("Задание не найдено");
+            throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
         }
 
         var course = await courseRepo.GetByIdAsync(assignment.CourseId);
 
         if (course == null)
         {
-            throw new NotFoundException("Курс не найден");
+            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
         }
 
         var teacherId = currentUser.GetUserId();
+        var role = currentUser.GetRole();
 
         var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
 
-        if (!isTeacher)
+        if (role != UserRole.Admin && !isTeacher)
         {
-            throw new ForbiddenException("Только преподаватель курса может ставить оценки");
+            throw new ForbiddenException("РўРѕР»СЊРєРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РєСѓСЂСЃР° РёР»Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ СЃС‚Р°РІРёС‚СЊ РѕС†РµРЅРєРё");
         }
 
         submission.Grade = dto.Value;
@@ -67,30 +69,31 @@ public class GradeService(
 
         if (submission == null)
         {
-            throw new NotFoundException("Решение не найдено");
+            throw new NotFoundException("Р РµС€РµРЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
         }
 
         var assignment = await assignmentRepo.GetByIdAsync(submission.AssignmentId);
 
         if (assignment == null)
         {
-            throw new NotFoundException("Задание не найдено");
+            throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
         }
 
         var course = await courseRepo.GetByIdAsync(assignment.CourseId);
 
         if (course == null)
         {
-            throw new NotFoundException("Курс не найден");
+            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
         }
 
         var teacherId = currentUser.GetUserId();
+        var role = currentUser.GetRole();
 
         var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
 
-        if (!isTeacher)
+        if (role != UserRole.Admin && !isTeacher)
         {
-            throw new ForbiddenException("Только преподаватель курса может удалять оценки");
+            throw new ForbiddenException("РўРѕР»СЊРєРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РєСѓСЂСЃР° РёР»Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ СѓРґР°Р»СЏС‚СЊ РѕС†РµРЅРєРё");
         }
 
         submission.Grade = null;
@@ -106,16 +109,17 @@ public class GradeService(
 
         if (course == null)
         {
-            throw new NotFoundException("Курс не найден");
+            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
         }
 
         var teacherId = currentUser.GetUserId();
+        var role = currentUser.GetRole();
 
         var isTeacher = course.Teachers.Any(t => t.UserId == teacherId);
 
-        if (!isTeacher)
+        if (role != UserRole.Admin && !isTeacher)
         {
-            throw new ForbiddenException("Только преподаватель курса может смотреть успеваемость");
+            throw new ForbiddenException("РўРѕР»СЊРєРѕ РїСЂРµРїРѕРґР°РІР°С‚РµР»СЊ РєСѓСЂСЃР° РёР»Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РјРѕР¶РµС‚ СЃРјРѕС‚СЂРµС‚СЊ СѓСЃРїРµРІР°РµРјРѕСЃС‚СЊ");
         }
 
         return await submissionRepo.GetCourseGradesAsync(courseId);
@@ -127,21 +131,27 @@ public class GradeService(
 
         if (course == null)
         {
-            throw new NotFoundException("Курс не найден");
+            throw new NotFoundException("РљСѓСЂСЃ РЅРµ РЅР°Р№РґРµРЅ");
         }
 
         var studentId = currentUser.GetUserId();
+        var role = currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+        {
+            return await submissionRepo.GetStudentCourseGradesAsync(courseId, studentId);
+        }
 
         var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
 
         if (student == null)
         {
-            throw new ForbiddenException("Только студент курса может смотреть свои оценки");
+            throw new ForbiddenException("РўРѕР»СЊРєРѕ СЃС‚СѓРґРµРЅС‚ РєСѓСЂСЃР° РјРѕР¶РµС‚ СЃРјРѕС‚СЂРµС‚СЊ СЃРІРѕРё РѕС†РµРЅРєРё");
         }
 
         if (student.IsBlocked)
         {
-            throw new ForbiddenException("Вы заблокированы на курсе");
+            throw new ForbiddenException("Р’С‹ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅС‹ РЅР° РєСѓСЂСЃРµ");
         }
 
         return await submissionRepo.GetStudentCourseGradesAsync(courseId, studentId);
