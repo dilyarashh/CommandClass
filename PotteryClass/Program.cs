@@ -34,7 +34,6 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -80,9 +79,42 @@ builder.Services.AddSingleton<IFileStorageService>(sp =>
 
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PotteryClass API",
+        Version = "v1",
+        Description = "API для управления курсами, заданиями, решениями и оценками"
+    });
+
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     options.IncludeXmlComments(xmlPath);
+
+    options.TagActionsBy(api =>
+    {
+        var controller = api.ActionDescriptor.RouteValues["controller"];
+
+        return controller switch
+        {
+            "Auth" => ["Авторизация"],
+            "Users" => ["Пользователи"],
+            "Courses" => ["Курсы"],
+            "CourseStudents" => ["Студенты курса"],
+            "CourseTeachers" => ["Преподаватели курса"],
+            "Assignments" => ["Задания"],
+            "Comments" => ["Комментарии к заданиям"],
+            "Submissions" => ["Решения"],
+            "Grades" => ["Оценивание"],
+            _ => [controller ?? "Прочее"]
+        };
+    });
+
+    options.OrderActionsBy(api =>
+    {
+        var controller = api.ActionDescriptor.RouteValues["controller"] ?? string.Empty;
+        var relativePath = api.RelativePath ?? string.Empty;
+        return $"{controller}_{relativePath}";
+    });
     
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -147,7 +179,12 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "PotteryClass API v1");
+    options.DocumentTitle = "PotteryClass Swagger";
+    options.DefaultModelsExpandDepth(-1);
+});
 
 app.UseCors("FrontendPolicy");
 

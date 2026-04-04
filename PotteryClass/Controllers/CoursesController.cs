@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PotteryClass.Data.DTOs;
-using PotteryClass.Services;
 using PotteryClass.Data.Entities.Enums;
+using PotteryClass.Services;
 
 namespace PotteryClass.Controllers;
 
@@ -53,81 +53,6 @@ public class CoursesController(ICourseService service) : ControllerBase
         var result = await service.GetCourseByIdAsync(courseId);
 
         return Ok(result);
-    }
-
-    /// <summary>
-    /// Получить список студентов курса по айди (только преподаватель)
-    /// </summary>
-    [HttpGet("{courseId:guid}/students")]
-    public async Task<ActionResult<List<CourseStudentDto>>> GetStudents(Guid courseId)
-    {
-        var result = await service.GetCourseStudentsAsync(courseId);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Добавить студента на курс вручную (преподаватель или администратор)
-    /// </summary>
-    [Authorize(Roles = "Admin,Teacher")]
-    [HttpPost("{courseId:guid}/students/{studentId:guid}")]
-    public async Task<IActionResult> AddStudent(Guid courseId, Guid studentId)
-    {
-        await service.AddStudentAsync(courseId, studentId);
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Удалить студента с курса (преподаватель или администратор)
-    /// </summary>
-    [Authorize(Roles = "Admin,Teacher")]
-    [HttpDelete("{courseId:guid}/students/{studentId:guid}")]
-    public async Task<IActionResult> RemoveStudent(Guid courseId, Guid studentId)
-    {
-        await service.RemoveStudentAsync(courseId, studentId);
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Заблокировать студента по его айди и айди курса (только преподаватель)
-    /// </summary>
-    [HttpPatch("{courseId:guid}/students/{studentId:guid}/block")]
-    public async Task<IActionResult> BlockStudent(Guid courseId, Guid studentId)
-    {
-        await service.BlockStudentAsync(courseId, studentId);
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Раблокировать студента по его айди и айди курса (только преподаватель)
-    /// </summary>
-    [HttpPatch("{courseId}/students/{studentId}/unblock")]
-    public async Task<IActionResult> UnblockStudent(Guid courseId, Guid studentId)
-    {
-        await service.UnblockStudentAsync(courseId, studentId);
-
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Назначить нового преподавателя на курс (только Admin)
-    /// </summary>
-    [HttpPost("{courseId}/teachers/{teacherId}")]
-    public async Task<IActionResult> AddTeacher(Guid courseId, Guid teacherId)
-    {
-        await service.AddTeacherAsync(courseId, teacherId);
-
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Снять пользователя с должности преподавателя курса (только Admin)
-    /// </summary>
-    [HttpDelete("{courseId}/teachers/{teacherId}")]
-    public async Task<IActionResult> RemoveTeacher(Guid courseId, Guid teacherId)
-    {
-        await service.RemoveTeacherAsync(courseId, teacherId);
-
-        return NoContent();
     }
 
     /// <summary>
@@ -187,13 +112,4 @@ public class CoursesController(ICourseService service) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Получить список преподавателей курса
-    /// </summary>
-    [HttpGet("{courseId:guid}/teachers")]
-    public async Task<ActionResult<List<CourseTeacherDto>>> GetTeachers(Guid courseId)
-    {
-        var result = await service.GetCourseTeachersAsync(courseId);
-        return Ok(result);
-    }
 }
