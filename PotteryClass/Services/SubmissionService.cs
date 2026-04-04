@@ -11,6 +11,7 @@ public class SubmissionService(
     ISubmissionRepository submissionRepository,
     IAssignmentRepository assignmentRepository,
     ICourseStudentRepository studentRepository,
+    ICourseTeacherRepository teacherRepository,
     ICurrentUser currentUser,
     IFileStorageService fileStorage)
     : ISubmissionService
@@ -18,6 +19,7 @@ public class SubmissionService(
     private readonly ISubmissionRepository _submissionRepository = submissionRepository;
     private readonly IAssignmentRepository _assignmentRepository = assignmentRepository;
     private readonly ICourseStudentRepository _studentRepository = studentRepository;
+    private readonly ICourseTeacherRepository _teacherRepository = teacherRepository;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly IFileStorageService _fileStorage = fileStorage;
 
@@ -157,6 +159,19 @@ public class SubmissionService(
 
         var role = _currentUser.GetRole();
         var userId = _currentUser.GetUserId();
+
+        if (role == UserRole.Teacher)
+        {
+            var assignment = await _assignmentRepository.GetByIdAsync(submission.AssignmentId)
+                ?? throw new NotFoundException("Задание не найдено");
+
+            var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+
+            if (!isTeacher)
+                throw new ForbiddenException("Нет доступа");
+
+            return Map(submission);
+        }
 
         if (role != UserRole.Admin &&
             submission.StudentId != userId)
