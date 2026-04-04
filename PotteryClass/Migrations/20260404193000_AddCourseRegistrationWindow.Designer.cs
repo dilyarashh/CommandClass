@@ -338,17 +338,21 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Comment", b =>
                 {
-                    b.HasOne("PotteryClass.Data.Entities.Assignment", null)
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
                         .WithMany("Comments")
                         .HasForeignKey("AssignmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PotteryClass.Data.Entities.User", null)
+                    b.HasOne("PotteryClass.Data.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.CourseStudent", b =>
@@ -391,11 +395,19 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Submission", b =>
                 {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("Submissions")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("PotteryClass.Data.Entities.User", "Student")
                         .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Assignment");
 
                     b.Navigation("Student");
                 });

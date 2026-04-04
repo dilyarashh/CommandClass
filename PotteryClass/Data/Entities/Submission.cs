@@ -6,6 +6,7 @@ public class Submission
 {
     public Guid Id { get; set; }
     public Guid AssignmentId { get; set; }
+    public Assignment Assignment { get; set; } = null!;
     public Guid StudentId { get; set; }
     public User Student { get; set; } = null!;
     public DateTime Created { get; set; }
