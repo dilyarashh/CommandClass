@@ -144,6 +144,12 @@ public class CourseService(
             throw new BadRequestException("Курс архивирован");
         }
 
+        var now = DateTime.UtcNow;
+        if (now < course.RegistrationStartsAtUtc || now > course.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Регистрация на курс закрыта");
+        }
+
         var link = await repo.GetStudentLinkAsync(course.Id, userId);
 
         if (link != null)
