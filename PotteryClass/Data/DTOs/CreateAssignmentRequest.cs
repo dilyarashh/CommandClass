@@ -7,6 +7,10 @@ public class CreateAssignmentRequest
     public string Title { get; set; }
     
     public string Text { get; set; }
+
+    public DateTime? PublishAtUtc { get; set; }
+
+    public DateTime? StartsAtUtc { get; set; }
     
     public bool RequiresSubmission { get; set; }
     

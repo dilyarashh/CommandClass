@@ -56,20 +56,38 @@ public class AssignmentService(
         if (!isStudent)
             throw new ForbiddenException("Нет доступа");
     }
+
+    private static void ValidateAssignmentSchedule(
+        DateTime? publishAtUtc,
+        DateTime? startsAtUtc,
+        DateTime? deadline)
+    {
+        if (publishAtUtc.HasValue && startsAtUtc.HasValue && publishAtUtc > startsAtUtc)
+            throw new BadRequestException("Дата публикации должна быть раньше даты старта");
+
+        if (startsAtUtc.HasValue && deadline.HasValue && startsAtUtc > deadline)
+            throw new BadRequestException("Дата старта должна быть раньше дедлайна");
+
+        if (publishAtUtc.HasValue && deadline.HasValue && publishAtUtc > deadline)
+            throw new BadRequestException("Дата публикации должна быть раньше дедлайна");
+    }
     
     public async Task<AssignmentDto> CreateAsync(CreateAssignmentRequest dto)
     {
         var userId = _currentUser.GetUserId();
 
         await EnsureTeacherOrAdmin(dto.CourseId);
+        ValidateAssignmentSchedule(dto.PublishAtUtc, dto.StartsAtUtc, dto.Deadline);
         
         var assignment = new Assignment
         {
             Id = Guid.NewGuid(),
             CourseId = dto.CourseId,
             CreatedById = userId,
-            Title = dto.Title,
-            Text = dto.Text,
+            Title = dto.Title.Trim(),
+            Text = dto.Text.Trim(),
+            PublishAtUtc = dto.PublishAtUtc,
+            StartsAtUtc = dto.StartsAtUtc,
             RequiresSubmission = dto.RequiresSubmission,
             Deadline = dto.Deadline,
             Created = DateTime.UtcNow
@@ -96,12 +114,24 @@ public class AssignmentService(
             ?? throw new NotFoundException("Задание не найдено");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        var nextPublishAtUtc = dto.PublishAtUtc ?? assignment.PublishAtUtc;
+        var nextStartsAtUtc = dto.StartsAtUtc ?? assignment.StartsAtUtc;
+        var nextDeadline = dto.Deadline ?? assignment.Deadline;
+
+        ValidateAssignmentSchedule(nextPublishAtUtc, nextStartsAtUtc, nextDeadline);
         
         if (dto.Title is not null)
-            assignment.Title = dto.Title;
+            assignment.Title = dto.Title.Trim();
 
         if (dto.Text is not null)
-            assignment.Text = dto.Text;
+            assignment.Text = dto.Text.Trim();
+
+        if (dto.PublishAtUtc.HasValue)
+            assignment.PublishAtUtc = dto.PublishAtUtc;
+
+        if (dto.StartsAtUtc.HasValue)
+            assignment.StartsAtUtc = dto.StartsAtUtc;
 
         if (dto.RequiresSubmission.HasValue)
             assignment.RequiresSubmission = dto.RequiresSubmission.Value;
@@ -132,6 +162,8 @@ public class AssignmentService(
             CourseId = assignment.CourseId,
             Title = assignment.Title,
             Text = assignment.Text,
+            PublishAtUtc = assignment.PublishAtUtc,
+            StartsAtUtc = assignment.StartsAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -232,6 +264,8 @@ public class AssignmentService(
             CourseId = assignment.CourseId,
             Title = assignment.Title,
             Text = assignment.Text,
+            PublishAtUtc = assignment.PublishAtUtc,
+            StartsAtUtc = assignment.StartsAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,
