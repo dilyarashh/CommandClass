@@ -9,6 +9,10 @@ public class UpdateAssignmentRequest
     public DateTime? PublishAtUtc { get; set; }
 
     public DateTime? StartsAtUtc { get; set; }
+
+    public int? MinTeamSize { get; set; }
+
+    public int? MaxTeamSize { get; set; }
     
     public bool? RequiresSubmission { get; set; }
     

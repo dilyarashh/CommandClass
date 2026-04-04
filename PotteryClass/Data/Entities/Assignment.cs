@@ -9,6 +9,8 @@ public class Assignment
     public string Text { get; set; }
     public DateTime? PublishAtUtc { get; set; }
     public DateTime? StartsAtUtc { get; set; }
+    public int? MinTeamSize { get; set; }
+    public int? MaxTeamSize { get; set; }
     public DateTime? Deadline { get; set; }
     public DateTime Created { get; set; }
     public bool RequiresSubmission { get; set; }

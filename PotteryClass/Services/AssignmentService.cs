@@ -71,6 +71,18 @@ public class AssignmentService(
         if (publishAtUtc.HasValue && deadline.HasValue && publishAtUtc > deadline)
             throw new BadRequestException("Дата публикации должна быть раньше дедлайна");
     }
+
+    private static void ValidateTeamSize(int? minTeamSize, int? maxTeamSize)
+    {
+        if (minTeamSize.HasValue && minTeamSize.Value < 1)
+            throw new BadRequestException("Минимальный размер команды должен быть не меньше 1");
+
+        if (maxTeamSize.HasValue && maxTeamSize.Value < 1)
+            throw new BadRequestException("Максимальный размер команды должен быть не меньше 1");
+
+        if (minTeamSize.HasValue && maxTeamSize.HasValue && minTeamSize > maxTeamSize)
+            throw new BadRequestException("Минимальный размер команды должен быть не больше максимального");
+    }
     
     public async Task<AssignmentDto> CreateAsync(CreateAssignmentRequest dto)
     {
@@ -78,6 +90,7 @@ public class AssignmentService(
 
         await EnsureTeacherOrAdmin(dto.CourseId);
         ValidateAssignmentSchedule(dto.PublishAtUtc, dto.StartsAtUtc, dto.Deadline);
+        ValidateTeamSize(dto.MinTeamSize, dto.MaxTeamSize);
         
         var assignment = new Assignment
         {
@@ -88,6 +101,8 @@ public class AssignmentService(
             Text = dto.Text.Trim(),
             PublishAtUtc = dto.PublishAtUtc,
             StartsAtUtc = dto.StartsAtUtc,
+            MinTeamSize = dto.MinTeamSize,
+            MaxTeamSize = dto.MaxTeamSize,
             RequiresSubmission = dto.RequiresSubmission,
             Deadline = dto.Deadline,
             Created = DateTime.UtcNow
@@ -118,8 +133,11 @@ public class AssignmentService(
         var nextPublishAtUtc = dto.PublishAtUtc ?? assignment.PublishAtUtc;
         var nextStartsAtUtc = dto.StartsAtUtc ?? assignment.StartsAtUtc;
         var nextDeadline = dto.Deadline ?? assignment.Deadline;
+        var nextMinTeamSize = dto.MinTeamSize ?? assignment.MinTeamSize;
+        var nextMaxTeamSize = dto.MaxTeamSize ?? assignment.MaxTeamSize;
 
         ValidateAssignmentSchedule(nextPublishAtUtc, nextStartsAtUtc, nextDeadline);
+        ValidateTeamSize(nextMinTeamSize, nextMaxTeamSize);
         
         if (dto.Title is not null)
             assignment.Title = dto.Title.Trim();
@@ -132,6 +150,12 @@ public class AssignmentService(
 
         if (dto.StartsAtUtc.HasValue)
             assignment.StartsAtUtc = dto.StartsAtUtc;
+
+        if (dto.MinTeamSize.HasValue)
+            assignment.MinTeamSize = dto.MinTeamSize;
+
+        if (dto.MaxTeamSize.HasValue)
+            assignment.MaxTeamSize = dto.MaxTeamSize;
 
         if (dto.RequiresSubmission.HasValue)
             assignment.RequiresSubmission = dto.RequiresSubmission.Value;
@@ -164,6 +188,8 @@ public class AssignmentService(
             Text = assignment.Text,
             PublishAtUtc = assignment.PublishAtUtc,
             StartsAtUtc = assignment.StartsAtUtc,
+            MinTeamSize = assignment.MinTeamSize,
+            MaxTeamSize = assignment.MaxTeamSize,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -266,6 +292,8 @@ public class AssignmentService(
             Text = assignment.Text,
             PublishAtUtc = assignment.PublishAtUtc,
             StartsAtUtc = assignment.StartsAtUtc,
+            MinTeamSize = assignment.MinTeamSize,
+            MaxTeamSize = assignment.MaxTeamSize,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,

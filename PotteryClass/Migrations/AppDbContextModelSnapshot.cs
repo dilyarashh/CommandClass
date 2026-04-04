@@ -37,6 +37,12 @@ namespace PotteryClass.Migrations
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("MaxTeamSize")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MinTeamSize")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("PublishAtUtc")
                         .HasColumnType("timestamp with time zone");
 
