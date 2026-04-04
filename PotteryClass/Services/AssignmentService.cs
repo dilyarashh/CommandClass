@@ -83,6 +83,22 @@ public class AssignmentService(
         if (minTeamSize.HasValue && maxTeamSize.HasValue && minTeamSize > maxTeamSize)
             throw new BadRequestException("Минимальный размер команды должен быть не больше максимального");
     }
+
+    private static string ResolveStatus(Assignment assignment)
+    {
+        var now = DateTime.UtcNow;
+
+        if (assignment.Deadline.HasValue && now > assignment.Deadline.Value)
+            return AssignmentStatus.Finished;
+
+        if (assignment.StartsAtUtc.HasValue && now < assignment.StartsAtUtc.Value)
+            return AssignmentStatus.Hidden;
+
+        if (assignment.PublishAtUtc.HasValue && now < assignment.PublishAtUtc.Value)
+            return AssignmentStatus.Hidden;
+
+        return AssignmentStatus.Available;
+    }
     
     public async Task<AssignmentDto> CreateAsync(CreateAssignmentRequest dto)
     {
@@ -186,6 +202,7 @@ public class AssignmentService(
             CourseId = assignment.CourseId,
             Title = assignment.Title,
             Text = assignment.Text,
+            Status = ResolveStatus(assignment),
             PublishAtUtc = assignment.PublishAtUtc,
             StartsAtUtc = assignment.StartsAtUtc,
             MinTeamSize = assignment.MinTeamSize,
@@ -290,6 +307,7 @@ public class AssignmentService(
             CourseId = assignment.CourseId,
             Title = assignment.Title,
             Text = assignment.Text,
+            Status = ResolveStatus(assignment),
             PublishAtUtc = assignment.PublishAtUtc,
             StartsAtUtc = assignment.StartsAtUtc,
             MinTeamSize = assignment.MinTeamSize,

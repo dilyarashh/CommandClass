@@ -10,6 +10,8 @@ public class AssignmentDto
 
     public string Text { get; set; }
 
+    public string Status { get; set; } = AssignmentStatus.Hidden;
+
     public DateTime? PublishAtUtc { get; set; }
 
     public DateTime? StartsAtUtc { get; set; }
