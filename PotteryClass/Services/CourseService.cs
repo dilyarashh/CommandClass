@@ -13,10 +13,27 @@ public class CourseService(
     ICourseRepository repo,
     ICurrentUser currentUser,
     ICourseCodeGenerator codeGen,
+    IUserRepository userRepository,
     IValidator<CreateCourseRequest> validator,
     IValidator<JoinCourseRequest> joinValidator)
     : ICourseService
 {
+    private Task EnsureTeacherOrAdmin(Course course)
+    {
+        var role = currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return Task.CompletedTask;
+
+        var userId = currentUser.GetUserId();
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        if (!isTeacher)
+            throw new ForbiddenException("Только преподаватель курса или администратор может выполнять это действие");
+
+        return Task.CompletedTask;
+    }
+
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest dto)
     {
         if (currentUser.GetRole() != UserRole.Admin)
@@ -255,6 +272,47 @@ public class CourseService(
             Email = x.User.Email,
             IsBlocked = x.IsBlocked
         }).ToList();
+    }
+
+    public async Task AddStudentAsync(Guid courseId, Guid studentId)
+    {
+        var course = await repo.GetByIdAsync(courseId);
+
+        if (course == null)
+            throw new NotFoundException("Курс не найден");
+
+        await EnsureTeacherOrAdmin(course);
+
+        var user = await userRepository.GetByIdAsync(studentId);
+
+        if (user == null)
+            throw new NotFoundException("Пользователь не найден");
+
+        if (user.Role != UserRole.Student)
+            throw new BadRequestException("На курс можно добавить только студента");
+
+        var isTeacher = course.Teachers.Any(t => t.UserId == studentId);
+        if (isTeacher)
+            throw new BadRequestException("Пользователь уже является преподавателем этого курса");
+
+        var existingStudent = course.Students.FirstOrDefault(s => s.UserId == studentId);
+        if (existingStudent != null)
+        {
+            if (existingStudent.IsBlocked)
+                throw new BadRequestException("Студент уже добавлен на курс, но заблокирован");
+
+            throw new BadRequestException("Студент уже добавлен на курс");
+        }
+
+        await repo.AddStudentAsync(new CourseStudent
+        {
+            CourseId = courseId,
+            UserId = studentId,
+            CreatedAtUtc = DateTime.UtcNow,
+            IsBlocked = false
+        });
+
+        await repo.SaveChangesAsync();
     }
 
     public async Task BlockStudentAsync(Guid courseId, Guid studentId)
