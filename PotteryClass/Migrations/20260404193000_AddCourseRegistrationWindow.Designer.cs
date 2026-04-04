@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PotteryClass.Data;
@@ -11,9 +12,10 @@ using PotteryClass.Data;
 namespace PotteryClass.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260404193000_AddCourseRegistrationWindow")]
+    partial class AddCourseRegistrationWindow
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -249,7 +251,43 @@ namespace PotteryClass.Migrations
 
                     b.HasIndex("AssignmentId");
 
+                    b.HasIndex("StudentId");
+
                     b.ToTable("Submissions");
+                });
+
+            modelBuilder.Entity("PotteryClass.Data.Entities.SubmissionFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubmissionId");
+
+                    b.ToTable("SubmissionFiles");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.User", b =>
@@ -289,40 +327,6 @@ namespace PotteryClass.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("SubmissionFile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("MimeType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<long>("Size")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("SubmissionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubmissionId");
-
-                    b.ToTable("SubmissionFiles");
-                });
-
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentFile", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", null)
@@ -334,21 +338,17 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Comment", b =>
                 {
-                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", null)
                         .WithMany("Comments")
                         .HasForeignKey("AssignmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PotteryClass.Data.Entities.User", "User")
+                    b.HasOne("PotteryClass.Data.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Assignment");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.CourseStudent", b =>
@@ -391,14 +391,16 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Submission", b =>
                 {
-                    b.HasOne("PotteryClass.Data.Entities.Assignment", null)
-                        .WithMany("Submissions")
-                        .HasForeignKey("AssignmentId")
+                    b.HasOne("PotteryClass.Data.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Student");
                 });
 
-            modelBuilder.Entity("SubmissionFile", b =>
+            modelBuilder.Entity("PotteryClass.Data.Entities.SubmissionFile", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Submission", "Submission")
                         .WithMany("Files")

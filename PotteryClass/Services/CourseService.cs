@@ -73,6 +73,11 @@ public class CourseService(
         var now = DateTime.UtcNow;
         var courseId = Guid.NewGuid();
 
+        if (dto.RegistrationStartsAtUtc >= dto.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Дата начала регистрации должна быть раньше даты окончания");
+        }
+
         var course = new Course
         {
             Id = courseId,
@@ -80,6 +85,8 @@ public class CourseService(
             Description = dto.Description,
             Code = code,
             IsActive = true,
+            RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc,
             CreatedByUserId = userId,
             CreatedAtUtc = now,
             Teachers = new List<CourseTeacher>
@@ -102,7 +109,9 @@ public class CourseService(
             Name = course.Name,
             Description = course.Description,
             Code = course.Code,
-            IsActive = course.IsActive
+            IsActive = course.IsActive,
+            RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
         };
     }
 
@@ -150,7 +159,9 @@ public class CourseService(
                 Name = course.Name,
                 Description = course.Description,
                 Code = course.Code,
-                IsActive = course.IsActive
+                IsActive = course.IsActive,
+                RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+                RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
             };
         }
 
@@ -171,7 +182,9 @@ public class CourseService(
             Name = course.Name,
             Description = course.Description,
             Code = course.Code,
-            IsActive = course.IsActive
+            IsActive = course.IsActive,
+            RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
         };
     }
 
@@ -192,6 +205,8 @@ public class CourseService(
                 Description = c.Description,
                 Code = c.Code,
                 IsActive = c.IsActive,
+                RegistrationStartsAtUtc = c.RegistrationStartsAtUtc,
+                RegistrationEndsAtUtc = c.RegistrationEndsAtUtc,
                 Role = isTeacher ? "Teacher" : "Student"
             };
         });
@@ -239,7 +254,9 @@ public class CourseService(
             Name = course.Name,
             Description = course.Description,
             Code = course.Code,
-            IsActive = course.IsActive
+            IsActive = course.IsActive,
+            RegistrationStartsAtUtc = course.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = course.RegistrationEndsAtUtc
         };
     }
 
@@ -517,7 +534,9 @@ public class CourseService(
             Name = c.Name,
             Description = c.Description,
             Code = c.Code,
-            IsActive = c.IsActive
+            IsActive = c.IsActive,
+            RegistrationStartsAtUtc = c.RegistrationStartsAtUtc,
+            RegistrationEndsAtUtc = c.RegistrationEndsAtUtc
         }).ToList();
     }
 
@@ -541,6 +560,13 @@ public class CourseService(
         }
 
         course.Description = dto.Description;
+        course.RegistrationStartsAtUtc = dto.RegistrationStartsAtUtc;
+        course.RegistrationEndsAtUtc = dto.RegistrationEndsAtUtc;
+
+        if (course.RegistrationStartsAtUtc >= course.RegistrationEndsAtUtc)
+        {
+            throw new BadRequestException("Дата начала регистрации должна быть раньше даты окончания");
+        }
 
         await repo.SaveChangesAsync();
     }

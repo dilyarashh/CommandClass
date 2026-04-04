@@ -11,6 +11,8 @@ public class MyCourseDto
     public string Code { get; set; } = default!;
 
     public bool IsActive { get; set; }
+    public DateTime RegistrationStartsAtUtc { get; set; }
+    public DateTime RegistrationEndsAtUtc { get; set; }
 
     public string Role { get; set; } = default!;
 }
