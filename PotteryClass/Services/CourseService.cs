@@ -36,9 +36,10 @@ public class CourseService(
 
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest dto)
     {
-        if (currentUser.GetRole() != UserRole.Admin)
+        var role = currentUser.GetRole();
+        if (role != UserRole.Admin && role != UserRole.Teacher)
         {
-            throw new ForbiddenException("Только администратор может создавать курсы");
+            throw new ForbiddenException("Только администратор или преподаватель может создавать курсы");
         }
 
         var validationResult = await validator.ValidateAsync(dto);
@@ -548,17 +549,14 @@ public class CourseService(
 
     public async Task UpdateCourseAsync(Guid courseId, UpdateCourseRequest dto)
     {
-        if (currentUser.GetRole() != UserRole.Admin)
-        {
-            throw new ForbiddenException("Только администратор может редактировать курсы");
-        }
-
         var course = await repo.GetByIdAsync(courseId);
 
         if (course == null)
         {
             throw new NotFoundException("Курс не найден");
         }
+
+        await EnsureTeacherOrAdmin(course);
 
         if (dto.Name != null)
         {

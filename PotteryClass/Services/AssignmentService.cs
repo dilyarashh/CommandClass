@@ -56,20 +56,58 @@ public class AssignmentService(
         if (!isStudent)
             throw new ForbiddenException("Нет доступа");
     }
+
+    private static void ValidateAssignmentSchedule(
+        DateTime? startsAtUtc,
+        DateTime? deadline)
+    {
+        if (startsAtUtc.HasValue && deadline.HasValue && startsAtUtc > deadline)
+            throw new BadRequestException("Дата старта должна быть раньше дедлайна");
+    }
+
+    private static void ValidateTeamSize(int? minTeamSize, int? maxTeamSize)
+    {
+        if (minTeamSize.HasValue && minTeamSize.Value < 1)
+            throw new BadRequestException("Минимальный размер команды должен быть не меньше 1");
+
+        if (maxTeamSize.HasValue && maxTeamSize.Value < 1)
+            throw new BadRequestException("Максимальный размер команды должен быть не меньше 1");
+
+        if (minTeamSize.HasValue && maxTeamSize.HasValue && minTeamSize > maxTeamSize)
+            throw new BadRequestException("Минимальный размер команды должен быть не больше максимального");
+    }
+
+    private static string ResolveStatus(Assignment assignment)
+    {
+        var now = DateTime.UtcNow;
+
+        if (assignment.Deadline.HasValue && now > assignment.Deadline.Value)
+            return AssignmentStatus.Finished;
+
+        if (assignment.StartsAtUtc.HasValue && now < assignment.StartsAtUtc.Value)
+            return AssignmentStatus.Hidden;
+
+        return AssignmentStatus.Available;
+    }
     
     public async Task<AssignmentDto> CreateAsync(CreateAssignmentRequest dto)
     {
         var userId = _currentUser.GetUserId();
 
         await EnsureTeacherOrAdmin(dto.CourseId);
+        ValidateAssignmentSchedule(dto.StartsAtUtc, dto.Deadline);
+        ValidateTeamSize(dto.MinTeamSize, dto.MaxTeamSize);
         
         var assignment = new Assignment
         {
             Id = Guid.NewGuid(),
             CourseId = dto.CourseId,
             CreatedById = userId,
-            Title = dto.Title,
-            Text = dto.Text,
+            Title = dto.Title.Trim(),
+            Text = dto.Text.Trim(),
+            StartsAtUtc = dto.StartsAtUtc,
+            MinTeamSize = dto.MinTeamSize,
+            MaxTeamSize = dto.MaxTeamSize,
             RequiresSubmission = dto.RequiresSubmission,
             Deadline = dto.Deadline,
             Created = DateTime.UtcNow
@@ -96,12 +134,29 @@ public class AssignmentService(
             ?? throw new NotFoundException("Задание не найдено");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        var nextStartsAtUtc = dto.StartsAtUtc ?? assignment.StartsAtUtc;
+        var nextDeadline = dto.Deadline ?? assignment.Deadline;
+        var nextMinTeamSize = dto.MinTeamSize ?? assignment.MinTeamSize;
+        var nextMaxTeamSize = dto.MaxTeamSize ?? assignment.MaxTeamSize;
+
+        ValidateAssignmentSchedule(nextStartsAtUtc, nextDeadline);
+        ValidateTeamSize(nextMinTeamSize, nextMaxTeamSize);
         
         if (dto.Title is not null)
-            assignment.Title = dto.Title;
+            assignment.Title = dto.Title.Trim();
 
         if (dto.Text is not null)
-            assignment.Text = dto.Text;
+            assignment.Text = dto.Text.Trim();
+
+        if (dto.StartsAtUtc.HasValue)
+            assignment.StartsAtUtc = dto.StartsAtUtc;
+
+        if (dto.MinTeamSize.HasValue)
+            assignment.MinTeamSize = dto.MinTeamSize;
+
+        if (dto.MaxTeamSize.HasValue)
+            assignment.MaxTeamSize = dto.MaxTeamSize;
 
         if (dto.RequiresSubmission.HasValue)
             assignment.RequiresSubmission = dto.RequiresSubmission.Value;
@@ -132,6 +187,10 @@ public class AssignmentService(
             CourseId = assignment.CourseId,
             Title = assignment.Title,
             Text = assignment.Text,
+            Status = ResolveStatus(assignment),
+            StartsAtUtc = assignment.StartsAtUtc,
+            MinTeamSize = assignment.MinTeamSize,
+            MaxTeamSize = assignment.MaxTeamSize,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -232,6 +291,10 @@ public class AssignmentService(
             CourseId = assignment.CourseId,
             Title = assignment.Title,
             Text = assignment.Text,
+            Status = ResolveStatus(assignment),
+            StartsAtUtc = assignment.StartsAtUtc,
+            MinTeamSize = assignment.MinTeamSize,
+            MaxTeamSize = assignment.MaxTeamSize,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,
