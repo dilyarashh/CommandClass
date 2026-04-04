@@ -57,6 +57,27 @@ public class AssignmentService(
             throw new ForbiddenException("Нет доступа");
     }
 
+    private async Task EnsureAssignmentVisibleToCurrentUser(Assignment assignment)
+    {
+        var role = _currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = _currentUser.GetUserId();
+        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+
+        if (isTeacher)
+            return;
+
+        var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+
+        if (assignment.StartsAtUtc.HasValue && DateTime.UtcNow < assignment.StartsAtUtc.Value)
+            throw new ForbiddenException("Задание пока недоступно");
+    }
+
     private static void ValidateAssignmentSchedule(
         DateTime? startsAtUtc,
         DateTime? deadline)
@@ -123,7 +144,7 @@ public class AssignmentService(
         var assignment = await _assignmentRepository.GetByIdAsync(id)
             ?? throw new NotFoundException("Задание не найдено");
 
-        await EnsureCourseMember(assignment.CourseId);
+        await EnsureAssignmentVisibleToCurrentUser(assignment);
         
         return MapAssignment(assignment);
     }
@@ -282,7 +303,7 @@ public class AssignmentService(
             PageSize = pageSize
         };
     }
-    
+
     private static AssignmentDto MapAssignment(Assignment assignment)
     {
         return new AssignmentDto
