@@ -6,8 +6,6 @@ public class UpdateAssignmentRequest
     
     public string? Text { get; set; }
 
-    public DateTime? PublishAtUtc { get; set; }
-
     public DateTime? StartsAtUtc { get; set; }
 
     public int? MinTeamSize { get; set; }

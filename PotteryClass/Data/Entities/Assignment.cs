@@ -7,7 +7,6 @@ public class Assignment
     public Guid CreatedById { get; set; }
     public string Title { get; set; }
     public string Text { get; set; }
-    public DateTime? PublishAtUtc { get; set; }
     public DateTime? StartsAtUtc { get; set; }
     public int? MinTeamSize { get; set; }
     public int? MaxTeamSize { get; set; }

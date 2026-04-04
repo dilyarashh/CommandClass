@@ -43,9 +43,6 @@ namespace PotteryClass.Migrations
                     b.Property<int?>("MinTeamSize")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("PublishAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime?>("StartsAtUtc")
                         .HasColumnType("timestamp with time zone");
 

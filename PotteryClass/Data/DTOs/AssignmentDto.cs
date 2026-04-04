@@ -12,8 +12,6 @@ public class AssignmentDto
 
     public string Status { get; set; } = AssignmentStatus.Hidden;
 
-    public DateTime? PublishAtUtc { get; set; }
-
     public DateTime? StartsAtUtc { get; set; }
 
     public int? MinTeamSize { get; set; }
