@@ -14,4 +14,8 @@ public interface IAssignmentService
         Guid courseId,
         int page,
         int pageSize);
+    Task<PagedAssignmentResult<AssignmentDto>> GetVisibleCourseAssignmentsAsync(
+        Guid courseId,
+        int page,
+        int pageSize);
 }

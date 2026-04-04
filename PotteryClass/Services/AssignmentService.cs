@@ -304,6 +304,43 @@ public class AssignmentService(
         };
     }
 
+    public async Task<PagedAssignmentResult<AssignmentDto>> GetVisibleCourseAssignmentsAsync(
+        Guid courseId,
+        int page,
+        int pageSize)
+    {
+        await EnsureCourseMember(courseId);
+
+        var (items, total) = await _assignmentRepository.GetByCourseAsync(
+            courseId,
+            page,
+            pageSize);
+
+        var role = _currentUser.GetRole();
+        if (role != UserRole.Admin)
+        {
+            var userId = _currentUser.GetUserId();
+            var isTeacher = await _teacherRepository.IsTeacherAsync(courseId, userId);
+
+            if (!isTeacher)
+            {
+                var now = DateTime.UtcNow;
+                items = items
+                    .Where(x => !x.StartsAtUtc.HasValue || x.StartsAtUtc.Value <= now)
+                    .ToList();
+                total = items.Count;
+            }
+        }
+
+        return new PagedAssignmentResult<AssignmentDto>
+        {
+            Items = items.Select(MapAssignment).ToList(),
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+    
     private static AssignmentDto MapAssignment(Assignment assignment)
     {
         return new AssignmentDto

@@ -104,4 +104,19 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
         var result = await service.GetCourseAssignmentsAsync(courseId, page, pageSize);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить задания курса с учетом доступности для текущего пользователя
+    /// </summary>
+    [Authorize]
+    [HttpGet("/api/courses/{courseId}/assignments/visible")]
+    [ProducesResponseType(typeof(PagedResult<AssignmentDto>), 200)]
+    public async Task<ActionResult<PagedResult<AssignmentDto>>> GetVisibleCourseAssignments(
+        Guid courseId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var result = await service.GetVisibleCourseAssignmentsAsync(courseId, page, pageSize);
+        return Ok(result);
+    }
 }
