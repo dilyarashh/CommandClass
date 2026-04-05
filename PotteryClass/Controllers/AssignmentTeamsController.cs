@@ -1,0 +1,57 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using PotteryClass.Data.DTOs;
+using PotteryClass.Services;
+
+namespace PotteryClass.Controllers;
+
+[ApiController]
+[Route("api/assignments")]
+public class AssignmentTeamsController(IAssignmentTeamService service) : ControllerBase
+{
+    /// <summary>
+    /// Получить команды задания
+    /// </summary>
+    [Authorize]
+    [HttpGet("{assignmentId:guid}/teams")]
+    public async Task<ActionResult<List<AssignmentTeamDto>>> GetTeams(Guid assignmentId)
+    {
+        var result = await service.GetByAssignmentAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Создать команду для задания
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/teams")]
+    public async Task<ActionResult<AssignmentTeamDto>> CreateTeam(
+        Guid assignmentId,
+        [FromBody] CreateAssignmentTeamRequest request)
+    {
+        var result = await service.CreateAsync(assignmentId, request);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Добавить участника в команду
+    /// </summary>
+    [Authorize]
+    [HttpPost("teams/{teamId:guid}/members/{studentId:guid}")]
+    public async Task<IActionResult> AddMember(Guid teamId, Guid studentId)
+    {
+        await service.AddMemberAsync(teamId, studentId);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Удалить участника из команды
+    /// </summary>
+    [Authorize]
+    [HttpDelete("teams/{teamId:guid}/members/{studentId:guid}")]
+    public async Task<IActionResult> RemoveMember(Guid teamId, Guid studentId)
+    {
+        await service.RemoveMemberAsync(teamId, studentId);
+        return NoContent();
+    }
+}
