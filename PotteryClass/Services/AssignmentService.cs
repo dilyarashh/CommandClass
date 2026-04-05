@@ -57,6 +57,27 @@ public class AssignmentService(
             throw new ForbiddenException("Нет доступа");
     }
 
+    private async Task EnsureAssignmentVisibleToCurrentUser(Assignment assignment)
+    {
+        var role = _currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = _currentUser.GetUserId();
+        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+
+        if (isTeacher)
+            return;
+
+        var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+
+        if (assignment.StartsAtUtc.HasValue && DateTime.UtcNow < assignment.StartsAtUtc.Value)
+            throw new ForbiddenException("Задание пока недоступно");
+    }
+
     private static void ValidateAssignmentSchedule(
         DateTime? startsAtUtc,
         DateTime? deadline)
@@ -123,7 +144,7 @@ public class AssignmentService(
         var assignment = await _assignmentRepository.GetByIdAsync(id)
             ?? throw new NotFoundException("Задание не найдено");
 
-        await EnsureCourseMember(assignment.CourseId);
+        await EnsureAssignmentVisibleToCurrentUser(assignment);
         
         return MapAssignment(assignment);
     }
@@ -273,6 +294,43 @@ public class AssignmentService(
             courseId,
             page,
             pageSize);
+
+        return new PagedAssignmentResult<AssignmentDto>
+        {
+            Items = items.Select(MapAssignment).ToList(),
+            Total = total,
+            Page = page,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<PagedAssignmentResult<AssignmentDto>> GetVisibleCourseAssignmentsAsync(
+        Guid courseId,
+        int page,
+        int pageSize)
+    {
+        await EnsureCourseMember(courseId);
+
+        var (items, total) = await _assignmentRepository.GetByCourseAsync(
+            courseId,
+            page,
+            pageSize);
+
+        var role = _currentUser.GetRole();
+        if (role != UserRole.Admin)
+        {
+            var userId = _currentUser.GetUserId();
+            var isTeacher = await _teacherRepository.IsTeacherAsync(courseId, userId);
+
+            if (!isTeacher)
+            {
+                var now = DateTime.UtcNow;
+                items = items
+                    .Where(x => !x.StartsAtUtc.HasValue || x.StartsAtUtc.Value <= now)
+                    .ToList();
+                total = items.Count;
+            }
+        }
 
         return new PagedAssignmentResult<AssignmentDto>
         {

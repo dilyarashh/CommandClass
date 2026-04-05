@@ -38,12 +38,24 @@ public class SubmissionService(
             throw new ForbiddenException("Нет доступа");
     }
 
+    private static void EnsureAssignmentAvailableForSubmission(Assignment assignment)
+    {
+        var now = DateTime.UtcNow;
+
+        if (assignment.StartsAtUtc.HasValue && now < assignment.StartsAtUtc.Value)
+            throw new BadRequestException("Задание ещё не доступно для отправки решения");
+
+        if (assignment.Deadline.HasValue && now > assignment.Deadline.Value)
+            throw new BadRequestException("Дедлайн задания уже прошёл");
+    }
+
     public async Task<SubmissionDto> SubmitAsync(Guid assignmentId, SubmissionFilesFormRequest dto)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
             ?? throw new NotFoundException("Задание не найдено");
 
         await EnsureStudent(assignment.CourseId);
+        EnsureAssignmentAvailableForSubmission(assignment);
 
         var studentId = _currentUser.GetUserId();
 
@@ -91,10 +103,15 @@ public class SubmissionService(
         var submission = await _submissionRepository.GetByIdAsync(submissionId)
             ?? throw new NotFoundException("Решение не найдено");
 
+        var assignment = await _assignmentRepository.GetByIdAsync(submission.AssignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
         var studentId = _currentUser.GetUserId();
 
         if (submission.StudentId != studentId)
             throw new ForbiddenException("Нет доступа");
+
+        EnsureAssignmentAvailableForSubmission(assignment);
 
         var files = submission.Files
             .Where(x => fileIds.Contains(x.Id))
