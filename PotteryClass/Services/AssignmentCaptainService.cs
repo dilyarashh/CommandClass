@@ -50,10 +50,16 @@ public class AssignmentCaptainService(
             throw new ForbiddenException("Нет доступа");
     }
 
-    private static void EnsureStudentSelfSelectionMode(Assignment assignment)
+    private static void EnsureStudentCaptainSelectionMode(Assignment assignment)
     {
-        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.StudentSelfSelection)
+        if (assignment.TeamFormationMode == AssignmentTeamFormationMode.TeacherManaged)
             throw new BadRequestException("Самовыбор капитанов недоступен для этого задания");
+    }
+
+    private static void EnsureTeacherCaptainSelectionMode(Assignment assignment)
+    {
+        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.TeacherManaged)
+            throw new BadRequestException("Ручное назначение капитанов недоступно для этого задания");
     }
 
     private static void EnsureCaptainSelectionIsOpen(Assignment assignment)
@@ -79,7 +85,7 @@ public class AssignmentCaptainService(
     public async Task SelfAssignAsync(Guid assignmentId)
     {
         var assignment = await GetAssignmentAsync(assignmentId);
-        EnsureStudentSelfSelectionMode(assignment);
+        EnsureStudentCaptainSelectionMode(assignment);
         EnsureCaptainSelectionIsOpen(assignment);
 
         var userId = currentUser.GetUserId();
@@ -111,6 +117,7 @@ public class AssignmentCaptainService(
     {
         var assignment = await GetAssignmentAsync(assignmentId);
         await EnsureTeacherOrAdminAsync(assignment);
+        EnsureTeacherCaptainSelectionMode(assignment);
         EnsureCaptainSelectionIsOpen(assignment);
 
         var user = await userRepository.GetByIdAsync(studentId)
@@ -143,7 +150,7 @@ public class AssignmentCaptainService(
     public async Task WithdrawSelfAsync(Guid assignmentId)
     {
         var assignment = await GetAssignmentAsync(assignmentId);
-        EnsureStudentSelfSelectionMode(assignment);
+        EnsureStudentCaptainSelectionMode(assignment);
         EnsureCaptainSelectionIsOpen(assignment);
 
         var userId = currentUser.GetUserId();
@@ -161,6 +168,7 @@ public class AssignmentCaptainService(
     {
         var assignment = await GetAssignmentAsync(assignmentId);
         await EnsureTeacherOrAdminAsync(assignment);
+        EnsureTeacherCaptainSelectionMode(assignment);
         EnsureCaptainSelectionIsOpen(assignment);
 
         var captain = await assignmentCaptainRepository.GetAsync(assignmentId, studentId)

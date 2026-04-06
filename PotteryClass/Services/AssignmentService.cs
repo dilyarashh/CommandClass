@@ -107,6 +107,7 @@ public class AssignmentService(
         {
             AssignmentTeamFormationModeDto.TeacherManaged => AssignmentTeamFormationMode.TeacherManaged,
             AssignmentTeamFormationModeDto.StudentSelfSelection => AssignmentTeamFormationMode.StudentSelfSelection,
+            AssignmentTeamFormationModeDto.RandomDistribution => AssignmentTeamFormationMode.RandomDistribution,
             _ => throw new BadRequestException("Неизвестный режим формирования команд")
         };
     }
@@ -117,6 +118,7 @@ public class AssignmentService(
         {
             AssignmentTeamFormationMode.TeacherManaged => AssignmentTeamFormationModeDto.TeacherManaged,
             AssignmentTeamFormationMode.StudentSelfSelection => AssignmentTeamFormationModeDto.StudentSelfSelection,
+            AssignmentTeamFormationMode.RandomDistribution => AssignmentTeamFormationModeDto.RandomDistribution,
             _ => AssignmentTeamFormationModeDto.TeacherManaged
         };
     }

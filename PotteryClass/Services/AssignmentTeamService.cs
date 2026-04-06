@@ -50,6 +50,12 @@ public class AssignmentTeamService(
             throw new BadRequestException("Свободный набор в команды недоступен для этого задания");
     }
 
+    private static void EnsureRandomDistributionMode(Assignment assignment)
+    {
+        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.RandomDistribution)
+            throw new BadRequestException("Случайное распределение недоступно для этого задания");
+    }
+
     private static void EnsureTeamFormationIsOpen(Assignment assignment)
     {
         var now = DateTime.UtcNow;
@@ -252,6 +258,55 @@ public class AssignmentTeamService(
 
         team.Members.Remove(member);
         await assignmentTeamRepository.SaveChangesAsync();
+    }
+
+    public async Task<List<AssignmentTeamDto>> DistributeRandomlyAsync(Guid assignmentId)
+    {
+        var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+        EnsureRandomDistributionMode(assignment);
+        EnsureTeamFormationIsOpen(assignment);
+        await EnsureCaptainTeamsCreatedAsync(assignment);
+
+        var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        if (teams.Count == 0)
+            throw new BadRequestException("Невозможно распределить студентов без выбранных капитанов");
+
+        var allStudentIds = await studentRepository.GetActiveStudentIdsAsync(assignment.CourseId);
+        var existingMemberIds = teams
+            .SelectMany(x => x.Members)
+            .Select(x => x.UserId)
+            .ToHashSet();
+
+        var pendingStudentIds = allStudentIds
+            .Where(x => !existingMemberIds.Contains(x))
+            .OrderBy(_ => Random.Shared.Next())
+            .ToList();
+
+        foreach (var studentId in pendingStudentIds)
+        {
+            var availableTeams = teams
+                .Where(x => !assignment.MaxTeamSize.HasValue || x.Members.Count < assignment.MaxTeamSize.Value)
+                .OrderBy(x => x.Members.Count)
+                .ThenBy(_ => Random.Shared.Next())
+                .ToList();
+
+            if (availableTeams.Count == 0)
+                throw new BadRequestException("Недостаточно мест в командах для случайного распределения");
+
+            var team = availableTeams.First();
+            team.Members.Add(new AssignmentTeamMember
+            {
+                TeamId = team.Id,
+                UserId = studentId,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        await assignmentTeamRepository.SaveChangesAsync();
+        return teams.Select(Map).ToList();
     }
 
     private static AssignmentTeamDto Map(AssignmentTeam team)

@@ -34,6 +34,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Случайно распределить студентов по командам
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/teams/random-distribution")]
+    public async Task<ActionResult<List<AssignmentTeamDto>>> DistributeRandomly(Guid assignmentId)
+    {
+        var result = await service.DistributeRandomlyAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Добавить участника в команду
     /// </summary>
     [Authorize]
