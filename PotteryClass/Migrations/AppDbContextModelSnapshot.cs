@@ -37,6 +37,9 @@ namespace PotteryClass.Migrations
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("CaptainSelectionEndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int?>("MaxTeamSize")
                         .HasColumnType("integer");
 
@@ -51,6 +54,12 @@ namespace PotteryClass.Migrations
 
                     b.Property<bool>("RequiresSubmission")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("TeamFormationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TeamFormationEndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Text")
                         .IsRequired()

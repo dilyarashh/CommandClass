@@ -1,5 +1,7 @@
 namespace PotteryClass.Data.Entities;
 
+using PotteryClass.Data.Entities.Enums;
+
 public class Assignment
 {
     public Guid Id { get; set; }
@@ -10,6 +12,9 @@ public class Assignment
     public DateTime? StartsAtUtc { get; set; }
     public int? MinTeamSize { get; set; }
     public int? MaxTeamSize { get; set; }
+    public AssignmentTeamFormationMode TeamFormationMode { get; set; } = AssignmentTeamFormationMode.TeacherManaged;
+    public DateTime? CaptainSelectionEndsAtUtc { get; set; }
+    public DateTime? TeamFormationEndsAtUtc { get; set; }
     public DateTime? Deadline { get; set; }
     public DateTime Created { get; set; }
     public bool RequiresSubmission { get; set; }

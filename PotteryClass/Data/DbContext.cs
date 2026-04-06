@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PotteryClass.Data.Entities;
+using PotteryClass.Data.Entities.Enums;
 
 namespace PotteryClass.Data;
 
@@ -83,6 +84,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.Property(x => x.Title).IsRequired();
             b.Property(x => x.Text).IsRequired();
+            b.Property(x => x.TeamFormationMode)
+                .HasConversion<int>()
+                .IsRequired();
             b.Property(x => x.Created).IsRequired();
             b.Property(x => x.RequiresSubmission).IsRequired();
         });

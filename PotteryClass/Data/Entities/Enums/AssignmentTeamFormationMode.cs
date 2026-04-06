@@ -1,0 +1,7 @@
+namespace PotteryClass.Data.Entities.Enums;
+
+public enum AssignmentTeamFormationMode
+{
+    TeacherManaged = 0,
+    StudentSelfSelection = 1
+}

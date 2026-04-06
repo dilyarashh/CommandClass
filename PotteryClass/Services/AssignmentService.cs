@@ -98,6 +98,57 @@ public class AssignmentService(
             throw new BadRequestException("Минимальный размер команды должен быть не больше максимального");
     }
 
+    private static AssignmentTeamFormationMode ParseTeamFormationMode(string? mode)
+    {
+        if (string.IsNullOrWhiteSpace(mode))
+            return AssignmentTeamFormationMode.TeacherManaged;
+
+        return mode.Trim().ToLowerInvariant() switch
+        {
+            AssignmentTeamFormationModeDto.TeacherManaged => AssignmentTeamFormationMode.TeacherManaged,
+            AssignmentTeamFormationModeDto.StudentSelfSelection => AssignmentTeamFormationMode.StudentSelfSelection,
+            _ => throw new BadRequestException("Неизвестный режим формирования команд")
+        };
+    }
+
+    private static string MapTeamFormationMode(AssignmentTeamFormationMode mode)
+    {
+        return mode switch
+        {
+            AssignmentTeamFormationMode.TeacherManaged => AssignmentTeamFormationModeDto.TeacherManaged,
+            AssignmentTeamFormationMode.StudentSelfSelection => AssignmentTeamFormationModeDto.StudentSelfSelection,
+            _ => AssignmentTeamFormationModeDto.TeacherManaged
+        };
+    }
+
+    private static DateTime? ResolveTeamFormationStartsAtUtc(
+        DateTime? startsAtUtc,
+        DateTime? captainSelectionEndsAtUtc)
+    {
+        return startsAtUtc ?? captainSelectionEndsAtUtc;
+    }
+
+    private static void ValidateTeamFormationSchedule(
+        DateTime? startsAtUtc,
+        DateTime? captainSelectionEndsAtUtc,
+        DateTime? teamFormationEndsAtUtc,
+        DateTime? deadline)
+    {
+        var teamFormationStartsAtUtc = ResolveTeamFormationStartsAtUtc(startsAtUtc, captainSelectionEndsAtUtc);
+
+        if (captainSelectionEndsAtUtc.HasValue && teamFormationStartsAtUtc.HasValue &&
+            captainSelectionEndsAtUtc.Value > teamFormationStartsAtUtc.Value)
+            throw new BadRequestException("Этап выбора капитанов должен завершаться не позже старта формирования команд");
+
+        if (teamFormationStartsAtUtc.HasValue && teamFormationEndsAtUtc.HasValue &&
+            teamFormationStartsAtUtc.Value > teamFormationEndsAtUtc.Value)
+            throw new BadRequestException("Формирование команд должно завершаться не раньше старта формирования");
+
+        if (teamFormationEndsAtUtc.HasValue && deadline.HasValue &&
+            teamFormationEndsAtUtc.Value > deadline.Value)
+            throw new BadRequestException("Формирование команд должно завершаться не позже дедлайна задания");
+    }
+
     private static string ResolveStatus(Assignment assignment)
     {
         var now = DateTime.UtcNow;
@@ -116,8 +167,10 @@ public class AssignmentService(
         var userId = _currentUser.GetUserId();
 
         await EnsureTeacherOrAdmin(dto.CourseId);
+        var teamFormationMode = ParseTeamFormationMode(dto.TeamFormationMode);
         ValidateAssignmentSchedule(dto.StartsAtUtc, dto.Deadline);
         ValidateTeamSize(dto.MinTeamSize, dto.MaxTeamSize);
+        ValidateTeamFormationSchedule(dto.StartsAtUtc, dto.CaptainSelectionEndsAtUtc, dto.TeamFormationEndsAtUtc, dto.Deadline);
         
         var assignment = new Assignment
         {
@@ -129,6 +182,9 @@ public class AssignmentService(
             StartsAtUtc = dto.StartsAtUtc,
             MinTeamSize = dto.MinTeamSize,
             MaxTeamSize = dto.MaxTeamSize,
+            TeamFormationMode = teamFormationMode,
+            CaptainSelectionEndsAtUtc = dto.CaptainSelectionEndsAtUtc,
+            TeamFormationEndsAtUtc = dto.TeamFormationEndsAtUtc,
             RequiresSubmission = dto.RequiresSubmission,
             Deadline = dto.Deadline,
             Created = DateTime.UtcNow
@@ -160,9 +216,15 @@ public class AssignmentService(
         var nextDeadline = dto.Deadline ?? assignment.Deadline;
         var nextMinTeamSize = dto.MinTeamSize ?? assignment.MinTeamSize;
         var nextMaxTeamSize = dto.MaxTeamSize ?? assignment.MaxTeamSize;
+        var nextCaptainSelectionEndsAtUtc = dto.CaptainSelectionEndsAtUtc ?? assignment.CaptainSelectionEndsAtUtc;
+        var nextTeamFormationEndsAtUtc = dto.TeamFormationEndsAtUtc ?? assignment.TeamFormationEndsAtUtc;
+        var nextTeamFormationMode = dto.TeamFormationMode is null
+            ? assignment.TeamFormationMode
+            : ParseTeamFormationMode(dto.TeamFormationMode);
 
         ValidateAssignmentSchedule(nextStartsAtUtc, nextDeadline);
         ValidateTeamSize(nextMinTeamSize, nextMaxTeamSize);
+        ValidateTeamFormationSchedule(nextStartsAtUtc, nextCaptainSelectionEndsAtUtc, nextTeamFormationEndsAtUtc, nextDeadline);
         
         if (dto.Title is not null)
             assignment.Title = dto.Title.Trim();
@@ -178,6 +240,15 @@ public class AssignmentService(
 
         if (dto.MaxTeamSize.HasValue)
             assignment.MaxTeamSize = dto.MaxTeamSize;
+
+        if (dto.TeamFormationMode is not null)
+            assignment.TeamFormationMode = nextTeamFormationMode;
+
+        if (dto.CaptainSelectionEndsAtUtc.HasValue)
+            assignment.CaptainSelectionEndsAtUtc = dto.CaptainSelectionEndsAtUtc;
+
+        if (dto.TeamFormationEndsAtUtc.HasValue)
+            assignment.TeamFormationEndsAtUtc = dto.TeamFormationEndsAtUtc;
 
         if (dto.RequiresSubmission.HasValue)
             assignment.RequiresSubmission = dto.RequiresSubmission.Value;
@@ -212,6 +283,10 @@ public class AssignmentService(
             StartsAtUtc = assignment.StartsAtUtc,
             MinTeamSize = assignment.MinTeamSize,
             MaxTeamSize = assignment.MaxTeamSize,
+            TeamFormationMode = MapTeamFormationMode(assignment.TeamFormationMode),
+            CaptainSelectionEndsAtUtc = assignment.CaptainSelectionEndsAtUtc,
+            TeamFormationStartsAtUtc = ResolveTeamFormationStartsAtUtc(assignment.StartsAtUtc, assignment.CaptainSelectionEndsAtUtc),
+            TeamFormationEndsAtUtc = assignment.TeamFormationEndsAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -353,6 +428,10 @@ public class AssignmentService(
             StartsAtUtc = assignment.StartsAtUtc,
             MinTeamSize = assignment.MinTeamSize,
             MaxTeamSize = assignment.MaxTeamSize,
+            TeamFormationMode = MapTeamFormationMode(assignment.TeamFormationMode),
+            CaptainSelectionEndsAtUtc = assignment.CaptainSelectionEndsAtUtc,
+            TeamFormationStartsAtUtc = ResolveTeamFormationStartsAtUtc(assignment.StartsAtUtc, assignment.CaptainSelectionEndsAtUtc),
+            TeamFormationEndsAtUtc = assignment.TeamFormationEndsAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,
