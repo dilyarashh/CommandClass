@@ -15,6 +15,9 @@ public class Assignment
     public AssignmentTeamFormationMode TeamFormationMode { get; set; } = AssignmentTeamFormationMode.TeacherManaged;
     public DateTime? CaptainSelectionEndsAtUtc { get; set; }
     public DateTime? TeamFormationEndsAtUtc { get; set; }
+    public Guid? DraftCurrentCaptainUserId { get; set; }
+    public DateTime? DraftStartedAtUtc { get; set; }
+    public DateTime? DraftCompletedAtUtc { get; set; }
     public DateTime? Deadline { get; set; }
     public DateTime Created { get; set; }
     public bool RequiresSubmission { get; set; }

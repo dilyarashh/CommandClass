@@ -62,6 +62,12 @@ public class AssignmentTeamService(
             throw new BadRequestException("Ручное распределение недоступно для этого задания");
     }
 
+    private static void EnsureCaptainDraftMode(Assignment assignment)
+    {
+        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.CaptainDraft)
+            throw new BadRequestException("Драфт капитанов недоступен для этого задания");
+    }
+
     private static void EnsureTeamFormationIsOpen(Assignment assignment)
     {
         var now = DateTime.UtcNow;
@@ -131,6 +137,74 @@ public class AssignmentTeamService(
                 IsBlocked = false
             }).ToList()
         };
+    }
+
+    private static AssignmentDraftStateDto MapDraftState(
+        Assignment assignment,
+        List<AssignmentTeam> teams,
+        List<User> availableStudents)
+    {
+        return new AssignmentDraftStateDto
+        {
+            IsStarted = assignment.DraftStartedAtUtc.HasValue,
+            IsCompleted = assignment.DraftCompletedAtUtc.HasValue,
+            CurrentCaptainUserId = assignment.DraftCurrentCaptainUserId,
+            StartedAtUtc = assignment.DraftStartedAtUtc,
+            CompletedAtUtc = assignment.DraftCompletedAtUtc,
+            Teams = teams.Select(Map).ToList(),
+            AvailableStudents = availableStudents.Select(x => new CourseStudentDto
+            {
+                Id = x.Id,
+                FirstName = x.FirstName,
+                LastName = x.LastName,
+                Email = x.Email,
+                IsBlocked = false
+            }).ToList()
+        };
+    }
+
+    private async Task<List<User>> GetAvailableStudentsAsync(Assignment assignment, List<AssignmentTeam> teams)
+    {
+        var assignedStudentIds = teams
+            .SelectMany(x => x.Members)
+            .Select(x => x.UserId)
+            .ToHashSet();
+
+        var availableStudents = await studentRepository.GetActiveStudentsAsync(assignment.CourseId);
+        return availableStudents
+            .Where(x => !assignedStudentIds.Contains(x.Id))
+            .OrderBy(x => x.LastName)
+            .ThenBy(x => x.FirstName)
+            .ToList();
+    }
+
+    private static Guid? ResolveNextDraftCaptainUserId(
+        Assignment assignment,
+        List<AssignmentCaptain> captains,
+        List<AssignmentTeam> teams,
+        bool hasAvailableStudents)
+    {
+        if (!hasAvailableStudents || captains.Count == 0)
+            return null;
+
+        var orderedCaptainIds = captains.Select(x => x.UserId).ToList();
+        var currentIndex = assignment.DraftCurrentCaptainUserId.HasValue
+            ? orderedCaptainIds.IndexOf(assignment.DraftCurrentCaptainUserId.Value)
+            : -1;
+
+        for (var step = 1; step <= orderedCaptainIds.Count; step++)
+        {
+            var nextIndex = (currentIndex + step) % orderedCaptainIds.Count;
+            var nextCaptainId = orderedCaptainIds[nextIndex];
+            var team = teams.FirstOrDefault(x => x.CaptainUserId == nextCaptainId);
+            if (team == null)
+                continue;
+
+            if (!assignment.MaxTeamSize.HasValue || team.Members.Count < assignment.MaxTeamSize.Value)
+                return nextCaptainId;
+        }
+
+        return null;
     }
 
     public async Task<AssignmentTeamDto> CreateAsync(Guid assignmentId, CreateAssignmentTeamRequest request)
@@ -356,6 +430,107 @@ public class AssignmentTeamService(
             .ToList();
 
         return MapManualDistribution(teams, availableStudents);
+    }
+
+    public async Task<AssignmentDraftStateDto> GetDraftStateAsync(Guid assignmentId)
+    {
+        var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureCourseMemberOrTeacher(assignment.CourseId);
+        EnsureCaptainDraftMode(assignment);
+        await EnsureCaptainTeamsCreatedAsync(assignment);
+
+        var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        var availableStudents = await GetAvailableStudentsAsync(assignment, teams);
+        return MapDraftState(assignment, teams, availableStudents);
+    }
+
+    public async Task<AssignmentDraftStateDto> StartDraftAsync(Guid assignmentId)
+    {
+        var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+        EnsureCaptainDraftMode(assignment);
+        EnsureTeamFormationIsOpen(assignment);
+        await EnsureCaptainTeamsCreatedAsync(assignment);
+
+        if (assignment.DraftStartedAtUtc.HasValue && !assignment.DraftCompletedAtUtc.HasValue)
+            throw new BadRequestException("Драфт уже запущен");
+
+        var captains = await assignmentCaptainRepository.GetByAssignmentAsync(assignmentId);
+        if (captains.Count == 0)
+            throw new BadRequestException("Невозможно начать драфт без выбранных капитанов");
+
+        var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        var availableStudents = await GetAvailableStudentsAsync(assignment, teams);
+        if (availableStudents.Count == 0)
+            throw new BadRequestException("Нет доступных студентов для драфта");
+
+        assignment.DraftStartedAtUtc = DateTime.UtcNow;
+        assignment.DraftCompletedAtUtc = null;
+        assignment.DraftCurrentCaptainUserId = captains.OrderBy(x => x.CreatedAtUtc).First().UserId;
+
+        await assignmentRepository.UpdateAsync(assignment);
+
+        return MapDraftState(assignment, teams, availableStudents);
+    }
+
+    public async Task<AssignmentDraftStateDto> DraftPickAsync(Guid assignmentId, Guid studentId)
+    {
+        var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        EnsureCaptainDraftMode(assignment);
+        EnsureTeamFormationIsOpen(assignment);
+
+        if (!assignment.DraftStartedAtUtc.HasValue)
+            throw new BadRequestException("Драфт еще не запущен");
+
+        if (assignment.DraftCompletedAtUtc.HasValue || !assignment.DraftCurrentCaptainUserId.HasValue)
+            throw new BadRequestException("Драфт уже завершен");
+
+        var currentUserId = currentUser.GetUserId();
+        if (currentUser.GetRole() != UserRole.Student || assignment.DraftCurrentCaptainUserId.Value != currentUserId)
+            throw new ForbiddenException("Сейчас не ваша очередь выбора");
+
+        var isStudentOnCourse = await studentRepository.IsStudentAsync(assignment.CourseId, studentId);
+        if (!isStudentOnCourse)
+            throw new BadRequestException("Студент не состоит в курсе");
+
+        var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        var currentTeam = teams.FirstOrDefault(x => x.CaptainUserId == currentUserId)
+                          ?? throw new NotFoundException("Команда капитана не найдена");
+
+        if (assignment.MaxTeamSize.HasValue && currentTeam.Members.Count >= assignment.MaxTeamSize.Value)
+            throw new BadRequestException("Нельзя превысить максимальный размер команды");
+
+        var isAlreadyInAssignmentTeam = await assignmentTeamRepository.IsStudentInAssignmentTeamsAsync(assignmentId, studentId);
+        if (isAlreadyInAssignmentTeam)
+            throw new BadRequestException("Студент уже состоит в одной из команд задания");
+
+        currentTeam.Members.Add(new AssignmentTeamMember
+        {
+            TeamId = currentTeam.Id,
+            UserId = studentId,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        await assignmentTeamRepository.SaveChangesAsync();
+
+        teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        var availableStudents = await GetAvailableStudentsAsync(assignment, teams);
+        var captains = await assignmentCaptainRepository.GetByAssignmentAsync(assignmentId);
+        var nextCaptainUserId = ResolveNextDraftCaptainUserId(assignment, captains, teams, availableStudents.Count > 0);
+
+        assignment.DraftCurrentCaptainUserId = nextCaptainUserId;
+        if (!nextCaptainUserId.HasValue)
+            assignment.DraftCompletedAtUtc = DateTime.UtcNow;
+
+        await assignmentRepository.UpdateAsync(assignment);
+
+        return MapDraftState(assignment, teams, availableStudents);
     }
 
     private static AssignmentTeamDto Map(AssignmentTeam team)

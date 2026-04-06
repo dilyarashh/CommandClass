@@ -40,6 +40,15 @@ namespace PotteryClass.Migrations
                     b.Property<DateTime?>("CaptainSelectionEndsAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DraftCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DraftCurrentCaptainUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DraftStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int?>("MaxTeamSize")
                         .HasColumnType("integer");
 
@@ -70,6 +79,8 @@ namespace PotteryClass.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DraftCurrentCaptainUserId");
 
                     b.ToTable("Assignments");
                 });
@@ -552,6 +563,10 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Assignment", b =>
                 {
+                    b.HasOne("PotteryClass.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("DraftCurrentCaptainUserId");
+
                     b.Navigation("Captains");
 
                     b.Navigation("Comments");

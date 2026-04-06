@@ -26,6 +26,12 @@ public class AssignmentDto
 
     public DateTime? TeamFormationEndsAtUtc { get; set; }
 
+    public Guid? DraftCurrentCaptainUserId { get; set; }
+
+    public DateTime? DraftStartedAtUtc { get; set; }
+
+    public DateTime? DraftCompletedAtUtc { get; set; }
+
     public bool RequiresSubmission { get; set; }
 
     public DateTime? Deadline { get; set; }

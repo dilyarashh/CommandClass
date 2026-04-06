@@ -12,4 +12,7 @@ public interface IAssignmentTeamService
     Task LeaveSelfAsync(Guid teamId);
     Task<List<AssignmentTeamDto>> DistributeRandomlyAsync(Guid assignmentId);
     Task<AssignmentManualDistributionDto> GetManualDistributionAsync(Guid assignmentId);
+    Task<AssignmentDraftStateDto> GetDraftStateAsync(Guid assignmentId);
+    Task<AssignmentDraftStateDto> StartDraftAsync(Guid assignmentId);
+    Task<AssignmentDraftStateDto> DraftPickAsync(Guid assignmentId, Guid studentId);
 }

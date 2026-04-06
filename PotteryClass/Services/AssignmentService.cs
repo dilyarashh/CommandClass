@@ -108,6 +108,7 @@ public class AssignmentService(
             AssignmentTeamFormationModeDto.TeacherManaged => AssignmentTeamFormationMode.TeacherManaged,
             AssignmentTeamFormationModeDto.StudentSelfSelection => AssignmentTeamFormationMode.StudentSelfSelection,
             AssignmentTeamFormationModeDto.RandomDistribution => AssignmentTeamFormationMode.RandomDistribution,
+            AssignmentTeamFormationModeDto.CaptainDraft => AssignmentTeamFormationMode.CaptainDraft,
             _ => throw new BadRequestException("Неизвестный режим формирования команд")
         };
     }
@@ -119,6 +120,7 @@ public class AssignmentService(
             AssignmentTeamFormationMode.TeacherManaged => AssignmentTeamFormationModeDto.TeacherManaged,
             AssignmentTeamFormationMode.StudentSelfSelection => AssignmentTeamFormationModeDto.StudentSelfSelection,
             AssignmentTeamFormationMode.RandomDistribution => AssignmentTeamFormationModeDto.RandomDistribution,
+            AssignmentTeamFormationMode.CaptainDraft => AssignmentTeamFormationModeDto.CaptainDraft,
             _ => AssignmentTeamFormationModeDto.TeacherManaged
         };
     }
@@ -289,6 +291,9 @@ public class AssignmentService(
             CaptainSelectionEndsAtUtc = assignment.CaptainSelectionEndsAtUtc,
             TeamFormationStartsAtUtc = ResolveTeamFormationStartsAtUtc(assignment.StartsAtUtc, assignment.CaptainSelectionEndsAtUtc),
             TeamFormationEndsAtUtc = assignment.TeamFormationEndsAtUtc,
+            DraftCurrentCaptainUserId = assignment.DraftCurrentCaptainUserId,
+            DraftStartedAtUtc = assignment.DraftStartedAtUtc,
+            DraftCompletedAtUtc = assignment.DraftCompletedAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -434,6 +439,9 @@ public class AssignmentService(
             CaptainSelectionEndsAtUtc = assignment.CaptainSelectionEndsAtUtc,
             TeamFormationStartsAtUtc = ResolveTeamFormationStartsAtUtc(assignment.StartsAtUtc, assignment.CaptainSelectionEndsAtUtc),
             TeamFormationEndsAtUtc = assignment.TeamFormationEndsAtUtc,
+            DraftCurrentCaptainUserId = assignment.DraftCurrentCaptainUserId,
+            DraftStartedAtUtc = assignment.DraftStartedAtUtc,
+            DraftCompletedAtUtc = assignment.DraftCompletedAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,

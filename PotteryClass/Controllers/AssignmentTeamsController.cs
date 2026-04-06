@@ -32,6 +32,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Получить состояние драфта капитанов
+    /// </summary>
+    [Authorize]
+    [HttpGet("{assignmentId:guid}/teams/draft")]
+    public async Task<ActionResult<AssignmentDraftStateDto>> GetDraftState(Guid assignmentId)
+    {
+        var result = await service.GetDraftStateAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Создать команду для задания
     /// </summary>
     [Authorize]
@@ -56,6 +67,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Запустить драфт капитанов
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/teams/draft/start")]
+    public async Task<ActionResult<AssignmentDraftStateDto>> StartDraft(Guid assignmentId)
+    {
+        var result = await service.StartDraftAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Добавить участника в команду
     /// </summary>
     [Authorize]
@@ -75,6 +97,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     {
         await service.JoinSelfAsync(teamId);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Выбрать участника в драфте
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/teams/draft/pick/{studentId:guid}")]
+    public async Task<ActionResult<AssignmentDraftStateDto>> DraftPick(Guid assignmentId, Guid studentId)
+    {
+        var result = await service.DraftPickAsync(assignmentId, studentId);
+        return Ok(result);
     }
 
     /// <summary>

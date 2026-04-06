@@ -90,6 +90,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired();
             b.Property(x => x.Created).IsRequired();
             b.Property(x => x.RequiresSubmission).IsRequired();
+
+            b.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.DraftCurrentCaptainUserId);
         });
 
         modelBuilder.Entity<AssignmentFile>(b =>
