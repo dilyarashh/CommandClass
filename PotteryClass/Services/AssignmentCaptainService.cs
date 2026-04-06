@@ -13,6 +13,7 @@ public class AssignmentCaptainService(
     IAssignmentTeamRepository assignmentTeamRepository,
     ICourseTeacherRepository teacherRepository,
     ICourseStudentRepository studentRepository,
+    IUserRepository userRepository,
     ICurrentUser currentUser) : IAssignmentCaptainService
 {
     private async Task<Assignment> GetAssignmentAsync(Guid assignmentId)
@@ -34,6 +35,18 @@ public class AssignmentCaptainService(
 
         var isStudent = await studentRepository.IsStudentAsync(assignment.CourseId, userId);
         if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+    }
+
+    private async Task EnsureTeacherOrAdminAsync(Assignment assignment)
+    {
+        var role = currentUser.GetRole();
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = currentUser.GetUserId();
+        var isTeacher = await teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+        if (!isTeacher)
             throw new ForbiddenException("Нет доступа");
     }
 
@@ -94,6 +107,39 @@ public class AssignmentCaptainService(
         await assignmentCaptainRepository.SaveChangesAsync();
     }
 
+    public async Task AssignAsync(Guid assignmentId, Guid studentId)
+    {
+        var assignment = await GetAssignmentAsync(assignmentId);
+        await EnsureTeacherOrAdminAsync(assignment);
+        EnsureCaptainSelectionIsOpen(assignment);
+
+        var user = await userRepository.GetByIdAsync(studentId)
+                   ?? throw new NotFoundException("Пользователь не найден");
+
+        if (user.Role != UserRole.Student)
+            throw new BadRequestException("Капитаном можно назначить только студента");
+
+        var isStudent = await studentRepository.IsStudentAsync(assignment.CourseId, studentId);
+        if (!isStudent)
+            throw new BadRequestException("Студент не состоит в курсе");
+
+        var alreadyCaptain = await assignmentCaptainRepository.ExistsAsync(assignmentId, studentId);
+        if (alreadyCaptain)
+            throw new BadRequestException("Пользователь уже выбран капитаном");
+
+        var isAlreadyInTeam = await assignmentTeamRepository.IsStudentInAssignmentTeamsAsync(assignmentId, studentId);
+        if (isAlreadyInTeam)
+            throw new BadRequestException("Нельзя назначить капитаном участника уже сформированной команды");
+
+        await assignmentCaptainRepository.AddAsync(new AssignmentCaptain
+        {
+            AssignmentId = assignmentId,
+            UserId = studentId,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        await assignmentCaptainRepository.SaveChangesAsync();
+    }
+
     public async Task WithdrawSelfAsync(Guid assignmentId)
     {
         var assignment = await GetAssignmentAsync(assignmentId);
@@ -105,6 +151,19 @@ public class AssignmentCaptainService(
             throw new ForbiddenException("Только студент может снять себя с роли капитана");
 
         var captain = await assignmentCaptainRepository.GetAsync(assignmentId, userId)
+                      ?? throw new NotFoundException("Пользователь не выбран капитаном");
+
+        await assignmentCaptainRepository.RemoveAsync(captain);
+        await assignmentCaptainRepository.SaveChangesAsync();
+    }
+
+    public async Task RemoveAsync(Guid assignmentId, Guid studentId)
+    {
+        var assignment = await GetAssignmentAsync(assignmentId);
+        await EnsureTeacherOrAdminAsync(assignment);
+        EnsureCaptainSelectionIsOpen(assignment);
+
+        var captain = await assignmentCaptainRepository.GetAsync(assignmentId, studentId)
                       ?? throw new NotFoundException("Пользователь не выбран капитаном");
 
         await assignmentCaptainRepository.RemoveAsync(captain);

@@ -32,6 +32,17 @@ public class AssignmentCaptainsController(IAssignmentCaptainService service) : C
     }
 
     /// <summary>
+    /// Назначить капитана задания
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/captains/{studentId:guid}")]
+    public async Task<IActionResult> Assign(Guid assignmentId, Guid studentId)
+    {
+        await service.AssignAsync(assignmentId, studentId);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Снять себя с роли капитана задания
     /// </summary>
     [Authorize]
@@ -39,6 +50,17 @@ public class AssignmentCaptainsController(IAssignmentCaptainService service) : C
     public async Task<IActionResult> WithdrawSelf(Guid assignmentId)
     {
         await service.WithdrawSelfAsync(assignmentId);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Снять капитана с задания
+    /// </summary>
+    [Authorize]
+    [HttpDelete("{assignmentId:guid}/captains/{studentId:guid}")]
+    public async Task<IActionResult> Remove(Guid assignmentId, Guid studentId)
+    {
+        await service.RemoveAsync(assignmentId, studentId);
         return NoContent();
     }
 }
