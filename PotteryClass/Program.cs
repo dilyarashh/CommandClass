@@ -55,8 +55,10 @@ builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 
 builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
+builder.Services.AddScoped<IAssignmentCaptainRepository, AssignmentCaptainRepository>();
 builder.Services.AddScoped<IAssignmentTeamRepository, AssignmentTeamRepository>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+builder.Services.AddScoped<IAssignmentCaptainService, AssignmentCaptainService>();
 builder.Services.AddScoped<IAssignmentTeamService, AssignmentTeamService>();
 builder.Services.AddScoped<ICourseTeacherRepository, CourseTeacherRepository>();
 builder.Services.AddScoped<ICourseStudentRepository, CourseStudentRepository>();

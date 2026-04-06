@@ -22,5 +22,6 @@ public class Assignment
     public ICollection<AssignmentFile> Files { get; set; } = new List<AssignmentFile>();
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     public ICollection<Submission> Submissions { get; set; } = new List<Submission>();
+    public ICollection<AssignmentCaptain> Captains { get; set; } = new List<AssignmentCaptain>();
     public ICollection<AssignmentTeam> Teams { get; set; } = new List<AssignmentTeam>();
 }

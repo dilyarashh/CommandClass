@@ -74,6 +74,24 @@ namespace PotteryClass.Migrations
                     b.ToTable("Assignments");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentCaptain", b =>
+                {
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("AssignmentId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AssignmentCaptains");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentFile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -392,6 +410,25 @@ namespace PotteryClass.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentCaptain", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("Captains")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
@@ -501,6 +538,8 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Assignment", b =>
                 {
+                    b.Navigation("Captains");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Files");

@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
+    public DbSet<AssignmentCaptain> AssignmentCaptains { get; set; }
     public DbSet<AssignmentTeam> AssignmentTeams { get; set; }
     public DbSet<AssignmentTeamMember> AssignmentTeamMembers { get; set; }
 
@@ -98,6 +99,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.Assignment)
                 .WithMany(x => x.Files)
                 .HasForeignKey(x => x.AssignmentId);
+        });
+
+        modelBuilder.Entity<AssignmentCaptain>(b =>
+        {
+            b.HasKey(x => new { x.AssignmentId, x.UserId });
+
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasIndex(x => x.UserId);
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.Captains)
+                .HasForeignKey(x => x.AssignmentId);
+
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
         });
 
         modelBuilder.Entity<Comment>(b =>
