@@ -21,6 +21,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Получить данные для ручного распределения команд
+    /// </summary>
+    [Authorize]
+    [HttpGet("{assignmentId:guid}/teams/manual-distribution")]
+    public async Task<ActionResult<AssignmentManualDistributionDto>> GetManualDistribution(Guid assignmentId)
+    {
+        var result = await service.GetManualDistributionAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Создать команду для задания
     /// </summary>
     [Authorize]

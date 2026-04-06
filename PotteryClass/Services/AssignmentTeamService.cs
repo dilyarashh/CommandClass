@@ -56,6 +56,12 @@ public class AssignmentTeamService(
             throw new BadRequestException("Случайное распределение недоступно для этого задания");
     }
 
+    private static void EnsureTeacherManagedMode(Assignment assignment)
+    {
+        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.TeacherManaged)
+            throw new BadRequestException("Ручное распределение недоступно для этого задания");
+    }
+
     private static void EnsureTeamFormationIsOpen(Assignment assignment)
     {
         var now = DateTime.UtcNow;
@@ -107,6 +113,24 @@ public class AssignmentTeamService(
         }
 
         await assignmentTeamRepository.SaveChangesAsync();
+    }
+
+    private static AssignmentManualDistributionDto MapManualDistribution(
+        List<AssignmentTeam> teams,
+        List<User> availableStudents)
+    {
+        return new AssignmentManualDistributionDto
+        {
+            Teams = teams.Select(Map).ToList(),
+            AvailableStudents = availableStudents.Select(x => new CourseStudentDto
+            {
+                Id = x.Id,
+                FirstName = x.FirstName,
+                LastName = x.LastName,
+                Email = x.Email,
+                IsBlocked = false
+            }).ToList()
+        };
     }
 
     public async Task<AssignmentTeamDto> CreateAsync(Guid assignmentId, CreateAssignmentTeamRequest request)
@@ -307,6 +331,31 @@ public class AssignmentTeamService(
 
         await assignmentTeamRepository.SaveChangesAsync();
         return teams.Select(Map).ToList();
+    }
+
+    public async Task<AssignmentManualDistributionDto> GetManualDistributionAsync(Guid assignmentId)
+    {
+        var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+        EnsureTeacherManagedMode(assignment);
+        await EnsureCaptainTeamsCreatedAsync(assignment);
+
+        var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        var assignedStudentIds = teams
+            .SelectMany(x => x.Members)
+            .Select(x => x.UserId)
+            .ToHashSet();
+
+        var availableStudents = await studentRepository.GetActiveStudentsAsync(assignment.CourseId);
+        availableStudents = availableStudents
+            .Where(x => !assignedStudentIds.Contains(x.Id))
+            .OrderBy(x => x.LastName)
+            .ThenBy(x => x.FirstName)
+            .ToList();
+
+        return MapManualDistribution(teams, availableStudents);
     }
 
     private static AssignmentTeamDto Map(AssignmentTeam team)

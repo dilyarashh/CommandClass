@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PotteryClass.Data.Entities;
 
 namespace PotteryClass.Data.Repositories;
 
@@ -18,6 +19,14 @@ public class CourseStudentRepository(AppDbContext db) : ICourseStudentRepository
         return await db.CourseStudents
             .Where(x => x.CourseId == courseId && !x.IsBlocked)
             .Select(x => x.UserId)
+            .ToListAsync();
+    }
+
+    public async Task<List<User>> GetActiveStudentsAsync(Guid courseId)
+    {
+        return await db.CourseStudents
+            .Where(x => x.CourseId == courseId && !x.IsBlocked)
+            .Select(x => x.User)
             .ToListAsync();
     }
 }

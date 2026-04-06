@@ -11,4 +11,5 @@ public interface IAssignmentTeamService
     Task JoinSelfAsync(Guid teamId);
     Task LeaveSelfAsync(Guid teamId);
     Task<List<AssignmentTeamDto>> DistributeRandomlyAsync(Guid assignmentId);
+    Task<AssignmentManualDistributionDto> GetManualDistributionAsync(Guid assignmentId);
 }
