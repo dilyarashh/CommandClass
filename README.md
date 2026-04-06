@@ -1,1 +1,1 @@
-# PotteryClass
+# CommandClass
