@@ -18,6 +18,24 @@ public class AssignmentDto
 
     public int? MaxTeamSize { get; set; }
 
+    public string TeamFormationMode { get; set; } = AssignmentTeamFormationModeDto.TeacherManaged;
+
+    public DateTime? CaptainSelectionEndsAtUtc { get; set; }
+
+    public DateTime? TeamFormationStartsAtUtc { get; set; }
+
+    public DateTime? TeamFormationEndsAtUtc { get; set; }
+
+    public Guid? DraftCurrentCaptainUserId { get; set; }
+
+    public DateTime? DraftStartedAtUtc { get; set; }
+
+    public DateTime? DraftCompletedAtUtc { get; set; }
+
+    public bool IsTeamCompositionLocked { get; set; }
+
+    public DateTime? TeamCompositionLockedAtUtc { get; set; }
+
     public bool RequiresSubmission { get; set; }
 
     public DateTime? Deadline { get; set; }

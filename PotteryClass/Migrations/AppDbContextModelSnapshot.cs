@@ -37,6 +37,18 @@ namespace PotteryClass.Migrations
                     b.Property<Guid>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("CaptainSelectionEndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DraftCompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DraftCurrentCaptainUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DraftStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int?>("MaxTeamSize")
                         .HasColumnType("integer");
 
@@ -52,6 +64,15 @@ namespace PotteryClass.Migrations
                     b.Property<bool>("RequiresSubmission")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("TeamFormationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TeamCompositionLockedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("TeamFormationEndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Text")
                         .IsRequired()
                         .HasColumnType("text");
@@ -62,7 +83,27 @@ namespace PotteryClass.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DraftCurrentCaptainUserId");
+
                     b.ToTable("Assignments");
+                });
+
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentCaptain", b =>
+                {
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("AssignmentId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AssignmentCaptains");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentFile", b =>
@@ -108,6 +149,9 @@ namespace PotteryClass.Migrations
                     b.Property<Guid>("AssignmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CaptainUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -119,6 +163,11 @@ namespace PotteryClass.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssignmentId");
+
+                    b.HasIndex("CaptainUserId");
+
+                    b.HasIndex("AssignmentId", "CaptainUserId")
+                        .IsUnique();
 
                     b.ToTable("AssignmentTeams");
                 });
@@ -383,6 +432,25 @@ namespace PotteryClass.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentCaptain", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("Captains")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
@@ -391,7 +459,13 @@ namespace PotteryClass.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PotteryClass.Data.Entities.User", "CaptainUser")
+                        .WithMany()
+                        .HasForeignKey("CaptainUserId");
+
                     b.Navigation("Assignment");
+
+                    b.Navigation("CaptainUser");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeamMember", b =>
@@ -492,6 +566,12 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Assignment", b =>
                 {
+                    b.HasOne("PotteryClass.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("DraftCurrentCaptainUserId");
+
+                    b.Navigation("Captains");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Files");

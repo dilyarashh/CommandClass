@@ -13,6 +13,12 @@ public class CreateAssignmentRequest
     public int? MinTeamSize { get; set; }
 
     public int? MaxTeamSize { get; set; }
+
+    public string? TeamFormationMode { get; set; }
+
+    public DateTime? CaptainSelectionEndsAtUtc { get; set; }
+
+    public DateTime? TeamFormationEndsAtUtc { get; set; }
     
     public bool RequiresSubmission { get; set; }
     
