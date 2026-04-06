@@ -153,6 +153,14 @@ public class AssignmentService(
             throw new BadRequestException("Формирование команд должно завершаться не позже дедлайна задания");
     }
 
+    private static bool IsTeamCompositionLocked(Assignment assignment)
+    {
+        if (assignment.TeamCompositionLockedAtUtc.HasValue)
+            return true;
+
+        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+    }
+
     private static string ResolveStatus(Assignment assignment)
     {
         var now = DateTime.UtcNow;
@@ -294,6 +302,8 @@ public class AssignmentService(
             DraftCurrentCaptainUserId = assignment.DraftCurrentCaptainUserId,
             DraftStartedAtUtc = assignment.DraftStartedAtUtc,
             DraftCompletedAtUtc = assignment.DraftCompletedAtUtc,
+            IsTeamCompositionLocked = IsTeamCompositionLocked(assignment),
+            TeamCompositionLockedAtUtc = assignment.TeamCompositionLockedAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -442,6 +452,8 @@ public class AssignmentService(
             DraftCurrentCaptainUserId = assignment.DraftCurrentCaptainUserId,
             DraftStartedAtUtc = assignment.DraftStartedAtUtc,
             DraftCompletedAtUtc = assignment.DraftCompletedAtUtc,
+            IsTeamCompositionLocked = IsTeamCompositionLocked(assignment),
+            TeamCompositionLockedAtUtc = assignment.TeamCompositionLockedAtUtc,
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,

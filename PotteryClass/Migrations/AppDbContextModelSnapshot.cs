@@ -67,6 +67,9 @@ namespace PotteryClass.Migrations
                     b.Property<int>("TeamFormationMode")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("TeamCompositionLockedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("TeamFormationEndsAtUtc")
                         .HasColumnType("timestamp with time zone");
 

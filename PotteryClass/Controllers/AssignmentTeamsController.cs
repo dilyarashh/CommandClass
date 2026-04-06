@@ -78,6 +78,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Зафиксировать состав команд
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/teams/lock")]
+    public async Task<IActionResult> LockComposition(Guid assignmentId)
+    {
+        await service.LockCompositionAsync(assignmentId);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Добавить участника в команду
     /// </summary>
     [Authorize]

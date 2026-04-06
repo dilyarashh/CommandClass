@@ -18,6 +18,7 @@ public class Assignment
     public Guid? DraftCurrentCaptainUserId { get; set; }
     public DateTime? DraftStartedAtUtc { get; set; }
     public DateTime? DraftCompletedAtUtc { get; set; }
+    public DateTime? TeamCompositionLockedAtUtc { get; set; }
     public DateTime? Deadline { get; set; }
     public DateTime Created { get; set; }
     public bool RequiresSubmission { get; set; }

@@ -15,4 +15,5 @@ public interface IAssignmentTeamService
     Task<AssignmentDraftStateDto> GetDraftStateAsync(Guid assignmentId);
     Task<AssignmentDraftStateDto> StartDraftAsync(Guid assignmentId);
     Task<AssignmentDraftStateDto> DraftPickAsync(Guid assignmentId, Guid studentId);
+    Task LockCompositionAsync(Guid assignmentId);
 }

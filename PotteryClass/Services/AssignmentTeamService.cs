@@ -79,6 +79,20 @@ public class AssignmentTeamService(
             throw new BadRequestException("Этап формирования команд уже завершен");
     }
 
+    private static bool IsTeamCompositionLocked(Assignment assignment)
+    {
+        if (assignment.TeamCompositionLockedAtUtc.HasValue)
+            return true;
+
+        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+    }
+
+    private static void EnsureTeamCompositionUnlocked(Assignment assignment)
+    {
+        if (IsTeamCompositionLocked(assignment))
+            throw new BadRequestException("Состав команд уже зафиксирован");
+    }
+
     private static string BuildCaptainTeamName(User user)
     {
         var fullName = $"{user.FirstName} {user.LastName}".Trim();
@@ -308,6 +322,7 @@ public class AssignmentTeamService(
 
         EnsureStudentSelfSelectionMode(team.Assignment);
         EnsureTeamFormationIsOpen(team.Assignment);
+        EnsureTeamCompositionUnlocked(team.Assignment);
         await EnsureCaptainTeamsCreatedAsync(team.Assignment);
 
         var userId = currentUser.GetUserId();
@@ -342,6 +357,7 @@ public class AssignmentTeamService(
 
         EnsureStudentSelfSelectionMode(team.Assignment);
         EnsureTeamFormationIsOpen(team.Assignment);
+        EnsureTeamCompositionUnlocked(team.Assignment);
 
         var userId = currentUser.GetUserId();
         if (currentUser.GetRole() != UserRole.Student)
@@ -366,6 +382,7 @@ public class AssignmentTeamService(
         await EnsureTeacherOrAdmin(assignment.CourseId);
         EnsureRandomDistributionMode(assignment);
         EnsureTeamFormationIsOpen(assignment);
+        EnsureTeamCompositionUnlocked(assignment);
         await EnsureCaptainTeamsCreatedAsync(assignment);
 
         var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
@@ -454,6 +471,7 @@ public class AssignmentTeamService(
         await EnsureTeacherOrAdmin(assignment.CourseId);
         EnsureCaptainDraftMode(assignment);
         EnsureTeamFormationIsOpen(assignment);
+        EnsureTeamCompositionUnlocked(assignment);
         await EnsureCaptainTeamsCreatedAsync(assignment);
 
         if (assignment.DraftStartedAtUtc.HasValue && !assignment.DraftCompletedAtUtc.HasValue)
@@ -484,6 +502,7 @@ public class AssignmentTeamService(
 
         EnsureCaptainDraftMode(assignment);
         EnsureTeamFormationIsOpen(assignment);
+        EnsureTeamCompositionUnlocked(assignment);
 
         if (!assignment.DraftStartedAtUtc.HasValue)
             throw new BadRequestException("Драфт еще не запущен");
@@ -531,6 +550,20 @@ public class AssignmentTeamService(
         await assignmentRepository.UpdateAsync(assignment);
 
         return MapDraftState(assignment, teams, availableStudents);
+    }
+
+    public async Task LockCompositionAsync(Guid assignmentId)
+    {
+        var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        if (assignment.TeamCompositionLockedAtUtc.HasValue)
+            throw new BadRequestException("Состав команд уже зафиксирован");
+
+        assignment.TeamCompositionLockedAtUtc = DateTime.UtcNow;
+        await assignmentRepository.UpdateAsync(assignment);
     }
 
     private static AssignmentTeamDto Map(AssignmentTeam team)
