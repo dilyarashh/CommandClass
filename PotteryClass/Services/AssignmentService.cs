@@ -74,6 +74,9 @@ public class AssignmentService(
         if (!isStudent)
             throw new ForbiddenException("Нет доступа");
 
+        if (!assignment.IsVisible)
+            throw new ForbiddenException("Задание скрыто");
+
         if (assignment.StartsAtUtc.HasValue && DateTime.UtcNow < assignment.StartsAtUtc.Value)
             throw new ForbiddenException("Задание пока недоступно");
     }
@@ -161,6 +164,11 @@ public class AssignmentService(
         return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
     }
 
+    private static bool IsClosed(Assignment assignment)
+    {
+        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+    }
+
     private static string ResolveStatus(Assignment assignment)
     {
         var now = DateTime.UtcNow;
@@ -198,6 +206,7 @@ public class AssignmentService(
             CaptainSelectionEndsAtUtc = dto.CaptainSelectionEndsAtUtc,
             TeamFormationEndsAtUtc = dto.TeamFormationEndsAtUtc,
             RequiresSubmission = dto.RequiresSubmission,
+            IsVisible = dto.IsVisible,
             Deadline = dto.Deadline,
             Created = DateTime.UtcNow
         };
@@ -262,6 +271,9 @@ public class AssignmentService(
         if (dto.TeamFormationEndsAtUtc.HasValue)
             assignment.TeamFormationEndsAtUtc = dto.TeamFormationEndsAtUtc;
 
+        if (dto.IsVisible.HasValue)
+            assignment.IsVisible = dto.IsVisible.Value;
+
         if (dto.RequiresSubmission.HasValue)
             assignment.RequiresSubmission = dto.RequiresSubmission.Value;
 
@@ -304,6 +316,8 @@ public class AssignmentService(
             DraftCompletedAtUtc = assignment.DraftCompletedAtUtc,
             IsTeamCompositionLocked = IsTeamCompositionLocked(assignment),
             TeamCompositionLockedAtUtc = assignment.TeamCompositionLockedAtUtc,
+            IsVisible = assignment.IsVisible,
+            IsClosed = IsClosed(assignment),
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created
@@ -416,9 +430,8 @@ public class AssignmentService(
 
             if (!isTeacher)
             {
-                var now = DateTime.UtcNow;
                 items = items
-                    .Where(x => !x.StartsAtUtc.HasValue || x.StartsAtUtc.Value <= now)
+                    .Where(x => x.IsVisible)
                     .ToList();
                 total = items.Count;
             }
@@ -454,6 +467,8 @@ public class AssignmentService(
             DraftCompletedAtUtc = assignment.DraftCompletedAtUtc,
             IsTeamCompositionLocked = IsTeamCompositionLocked(assignment),
             TeamCompositionLockedAtUtc = assignment.TeamCompositionLockedAtUtc,
+            IsVisible = assignment.IsVisible,
+            IsClosed = IsClosed(assignment),
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
             Created = assignment.Created,
@@ -466,5 +481,16 @@ public class AssignmentService(
                 Size = f.Size
             }).ToList()
         };
+    }
+
+    public async Task UpdateVisibilityAsync(Guid id, bool isVisible)
+    {
+        var assignment = await _assignmentRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        assignment.IsVisible = isVisible;
+        await _assignmentRepository.UpdateAsync(assignment);
     }
 }

@@ -21,6 +21,7 @@ public class Assignment
     public DateTime? TeamCompositionLockedAtUtc { get; set; }
     public DateTime? Deadline { get; set; }
     public DateTime Created { get; set; }
+    public bool IsVisible { get; set; }
     public bool RequiresSubmission { get; set; }
     
     public ICollection<AssignmentFile> Files { get; set; } = new List<AssignmentFile>();

@@ -50,6 +50,19 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Изменить видимость задания для студентов
+    /// </summary>
+    [Authorize]
+    [HttpPatch("{id}/visibility")]
+    public async Task<IActionResult> UpdateVisibility(
+        Guid id,
+        [FromBody] UpdateAssignmentVisibilityRequest dto)
+    {
+        await service.UpdateVisibilityAsync(id, dto.IsVisible);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Удалить задание
     /// </summary>
     [Authorize]

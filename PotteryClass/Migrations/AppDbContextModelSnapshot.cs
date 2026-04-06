@@ -49,6 +49,9 @@ namespace PotteryClass.Migrations
                     b.Property<DateTime?>("DraftStartedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsVisible")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("MaxTeamSize")
                         .HasColumnType("integer");
 
