@@ -99,6 +99,48 @@ namespace PotteryClass.Migrations
                     b.ToTable("AssignmentFiles");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.ToTable("AssignmentTeams");
+                });
+
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeamMember", b =>
+                {
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TeamId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AssignmentTeamMembers");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.BlackToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -341,6 +383,36 @@ namespace PotteryClass.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("Teams")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+                });
+
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeamMember", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.AssignmentTeam", "Team")
+                        .WithMany("Members")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Team");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.Comment", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
@@ -425,6 +497,13 @@ namespace PotteryClass.Migrations
                     b.Navigation("Files");
 
                     b.Navigation("Submissions");
+
+                    b.Navigation("Teams");
+                });
+
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Course", b =>

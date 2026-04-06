@@ -15,6 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
+    public DbSet<AssignmentTeam> AssignmentTeams { get; set; }
+    public DbSet<AssignmentTeamMember> AssignmentTeamMembers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -132,6 +134,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.Submission)
                 .WithMany(x => x.Files)
                 .HasForeignKey(x => x.SubmissionId);
+        });
+
+        modelBuilder.Entity<AssignmentTeam>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.Teams)
+                .HasForeignKey(x => x.AssignmentId);
+        });
+
+        modelBuilder.Entity<AssignmentTeamMember>(b =>
+        {
+            b.HasKey(x => new { x.TeamId, x.UserId });
+
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasOne(x => x.Team)
+                .WithMany(x => x.Members)
+                .HasForeignKey(x => x.TeamId);
+
+            b.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId);
         });
     }
 }
