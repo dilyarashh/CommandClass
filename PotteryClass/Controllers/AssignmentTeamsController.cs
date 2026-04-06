@@ -45,6 +45,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Вступить в команду
+    /// </summary>
+    [Authorize]
+    [HttpPost("teams/{teamId:guid}/join-self")]
+    public async Task<IActionResult> JoinSelf(Guid teamId)
+    {
+        await service.JoinSelfAsync(teamId);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Удалить участника из команды
     /// </summary>
     [Authorize]
@@ -52,6 +63,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     public async Task<IActionResult> RemoveMember(Guid teamId, Guid studentId)
     {
         await service.RemoveMemberAsync(teamId, studentId);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Выйти из команды
+    /// </summary>
+    [Authorize]
+    [HttpDelete("teams/{teamId:guid}/leave-self")]
+    public async Task<IActionResult> LeaveSelf(Guid teamId)
+    {
+        await service.LeaveSelfAsync(teamId);
         return NoContent();
     }
 }

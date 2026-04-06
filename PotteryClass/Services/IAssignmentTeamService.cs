@@ -8,4 +8,6 @@ public interface IAssignmentTeamService
     Task<List<AssignmentTeamDto>> GetByAssignmentAsync(Guid assignmentId);
     Task AddMemberAsync(Guid teamId, Guid studentId);
     Task RemoveMemberAsync(Guid teamId, Guid studentId);
+    Task JoinSelfAsync(Guid teamId);
+    Task LeaveSelfAsync(Guid teamId);
 }

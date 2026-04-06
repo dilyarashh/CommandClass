@@ -168,9 +168,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.Property(x => x.CreatedAtUtc).IsRequired();
 
+            b.HasIndex(x => new { x.AssignmentId, x.CaptainUserId }).IsUnique();
+
             b.HasOne(x => x.Assignment)
                 .WithMany(x => x.Teams)
                 .HasForeignKey(x => x.AssignmentId);
+
+            b.HasOne(x => x.CaptainUser)
+                .WithMany()
+                .HasForeignKey(x => x.CaptainUserId);
         });
 
         modelBuilder.Entity<AssignmentTeamMember>(b =>

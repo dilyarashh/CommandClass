@@ -135,6 +135,9 @@ namespace PotteryClass.Migrations
                     b.Property<Guid>("AssignmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CaptainUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -146,6 +149,11 @@ namespace PotteryClass.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssignmentId");
+
+                    b.HasIndex("CaptainUserId");
+
+                    b.HasIndex("AssignmentId", "CaptainUserId")
+                        .IsUnique();
 
                     b.ToTable("AssignmentTeams");
                 });
@@ -437,7 +445,13 @@ namespace PotteryClass.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PotteryClass.Data.Entities.User", "CaptainUser")
+                        .WithMany()
+                        .HasForeignKey("CaptainUserId");
+
                     b.Navigation("Assignment");
+
+                    b.Navigation("CaptainUser");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeamMember", b =>
