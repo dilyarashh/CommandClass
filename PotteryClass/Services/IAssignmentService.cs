@@ -18,4 +18,5 @@ public interface IAssignmentService
         Guid courseId,
         int page,
         int pageSize);
+    Task UpdateVisibilityAsync(Guid id, bool isVisible);
 }

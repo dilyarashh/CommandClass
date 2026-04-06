@@ -19,6 +19,8 @@ public class CreateAssignmentRequest
     public DateTime? CaptainSelectionEndsAtUtc { get; set; }
 
     public DateTime? TeamFormationEndsAtUtc { get; set; }
+
+    public bool IsVisible { get; set; }
     
     public bool RequiresSubmission { get; set; }
     

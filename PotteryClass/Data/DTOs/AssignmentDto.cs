@@ -36,6 +36,10 @@ public class AssignmentDto
 
     public DateTime? TeamCompositionLockedAtUtc { get; set; }
 
+    public bool IsVisible { get; set; }
+
+    public bool IsClosed { get; set; }
+
     public bool RequiresSubmission { get; set; }
 
     public DateTime? Deadline { get; set; }

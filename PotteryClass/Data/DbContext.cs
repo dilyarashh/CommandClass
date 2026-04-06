@@ -89,6 +89,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasConversion<int>()
                 .IsRequired();
             b.Property(x => x.Created).IsRequired();
+            b.Property(x => x.IsVisible).IsRequired();
             b.Property(x => x.RequiresSubmission).IsRequired();
 
             b.HasOne<User>()
