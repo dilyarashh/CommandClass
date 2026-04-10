@@ -350,6 +350,9 @@ namespace PotteryClass.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TeacherComment")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uuid");
 

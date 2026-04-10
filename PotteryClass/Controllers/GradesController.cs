@@ -62,4 +62,28 @@ public class GradesController(IGradeService service) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Получить итоговые командные оценки по заданию
+    /// </summary>
+    [Authorize]
+    [HttpGet("/api/assignments/{assignmentId:guid}/team-grades")]
+    [ProducesResponseType(typeof(List<AssignmentTeamGradeDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<AssignmentTeamGradeDto>>> GetAssignmentTeamGrades(Guid assignmentId)
+    {
+        var result = await service.GetAssignmentTeamGradesAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Получить итоговую оценку своей команды по заданию
+    /// </summary>
+    [Authorize]
+    [HttpGet("/api/assignments/{assignmentId:guid}/my-team-grade")]
+    [ProducesResponseType(typeof(AssignmentTeamGradeDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AssignmentTeamGradeDto>> GetMyTeamGrade(Guid assignmentId)
+    {
+        var result = await service.GetMyTeamGradeAsync(assignmentId);
+        return Ok(result);
+    }
 }

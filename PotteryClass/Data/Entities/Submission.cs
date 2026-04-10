@@ -11,6 +11,7 @@ public class Submission
     public User Student { get; set; } = null!;
     public DateTime Created { get; set; }
     public int? Grade { get; set; }
+    public string? TeacherComment { get; set; }
     public Guid? GradedByTeacherId { get; set; }
     public DateTime? GradedAtUtc { get; set; }
     public SubmissionStatus Status { get; set; }

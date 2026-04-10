@@ -6,6 +6,7 @@ public class SubmissionGradeDto
     public Guid AssignmentId { get; set; }
     public Guid StudentId { get; set; }
     public int? Grade { get; set; }
+    public string? TeacherComment { get; set; }
     public Guid? GradedByTeacherId { get; set; }
     public DateTime? GradedAtUtc { get; set; }
 }

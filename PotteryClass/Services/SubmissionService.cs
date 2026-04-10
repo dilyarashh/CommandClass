@@ -140,6 +140,9 @@ public class SubmissionService(
 
             Created = submission.Created,
             Grade = submission.Grade,
+            TeacherComment = submission.TeacherComment,
+            GradedByTeacherId = submission.GradedByTeacherId,
+            GradedAtUtc = submission.GradedAtUtc,
             Status = submission.Status,
 
             Files = submission.Files.Select(f => new SubmissionFileDto
