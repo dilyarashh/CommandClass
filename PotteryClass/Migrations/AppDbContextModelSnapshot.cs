@@ -34,11 +34,11 @@ namespace PotteryClass.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CreatedById")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime?>("CaptainSelectionEndsAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DraftCompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -67,14 +67,14 @@ namespace PotteryClass.Migrations
                     b.Property<bool>("RequiresSubmission")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("TeamFormationMode")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime?>("TeamCompositionLockedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("TeamFormationEndsAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TeamFormationMode")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Text")
                         .IsRequired()
@@ -158,6 +158,9 @@ namespace PotteryClass.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("FinalSubmissionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -171,6 +174,8 @@ namespace PotteryClass.Migrations
 
                     b.HasIndex("AssignmentId", "CaptainUserId")
                         .IsUnique();
+
+                    b.HasIndex("FinalSubmissionId");
 
                     b.ToTable("AssignmentTeams");
                 });
@@ -426,15 +431,6 @@ namespace PotteryClass.Migrations
                     b.ToTable("SubmissionFiles");
                 });
 
-            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentFile", b =>
-                {
-                    b.HasOne("PotteryClass.Data.Entities.Assignment", null)
-                        .WithMany("Files")
-                        .HasForeignKey("AssignmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentCaptain", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
@@ -454,6 +450,17 @@ namespace PotteryClass.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentFile", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("Files")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
@@ -466,9 +473,16 @@ namespace PotteryClass.Migrations
                         .WithMany()
                         .HasForeignKey("CaptainUserId");
 
+                    b.HasOne("PotteryClass.Data.Entities.Submission", "FinalSubmission")
+                        .WithMany()
+                        .HasForeignKey("FinalSubmissionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Assignment");
 
                     b.Navigation("CaptainUser");
+
+                    b.Navigation("FinalSubmission");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeamMember", b =>

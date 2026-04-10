@@ -182,6 +182,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.CaptainUser)
                 .WithMany()
                 .HasForeignKey(x => x.CaptainUserId);
+
+            b.HasOne(x => x.FinalSubmission)
+                .WithMany()
+                .HasForeignKey(x => x.FinalSubmissionId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<AssignmentTeamMember>(b =>
