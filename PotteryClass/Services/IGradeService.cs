@@ -8,4 +8,6 @@ public interface IGradeService
     Task DeleteGradeAsync(Guid submissionId);
     Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId);
     Task<List<MyCourseGradeDto>> GetMyCourseGradesAsync(Guid courseId);
+    Task<List<AssignmentTeamGradeDto>> GetAssignmentTeamGradesAsync(Guid assignmentId);
+    Task<AssignmentTeamGradeDto> GetMyTeamGradeAsync(Guid assignmentId);
 }

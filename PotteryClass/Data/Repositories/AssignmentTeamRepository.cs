@@ -34,6 +34,15 @@ public class AssignmentTeamRepository(AppDbContext db) : IAssignmentTeamReposito
             .ThenInclude(x => x.User)
             .FirstOrDefaultAsync(x => x.AssignmentId == assignmentId && x.CaptainUserId == captainUserId);
 
+    public Task<AssignmentTeam?> GetStudentTeamAsync(Guid assignmentId, Guid studentId)
+        => db.AssignmentTeams
+            .Include(x => x.Assignment)
+            .Include(x => x.CaptainUser)
+            .Include(x => x.FinalSubmission)
+            .Include(x => x.Members)
+            .ThenInclude(x => x.User)
+            .FirstOrDefaultAsync(x => x.AssignmentId == assignmentId && x.Members.Any(m => m.UserId == studentId));
+
     public Task<bool> IsStudentInAssignmentTeamsAsync(Guid assignmentId, Guid studentId)
         => db.AssignmentTeamMembers
             .AnyAsync(x => x.Team.AssignmentId == assignmentId && x.UserId == studentId);

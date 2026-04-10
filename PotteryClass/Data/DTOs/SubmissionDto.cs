@@ -14,6 +14,9 @@ public class SubmissionDto
 
     public DateTime Created { get; set; }
     public int? Grade { get; set; }
+    public string? TeacherComment { get; set; }
+    public Guid? GradedByTeacherId { get; set; }
+    public DateTime? GradedAtUtc { get; set; }
     public SubmissionStatus Status { get; set; }
 
     public List<SubmissionFileDto> Files { get; set; } = new();
