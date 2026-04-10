@@ -21,6 +21,17 @@ public class AssignmentCaptainsController(IAssignmentCaptainService service) : C
     }
 
     /// <summary>
+    /// Получить мой статус капитана по заданию
+    /// </summary>
+    [Authorize]
+    [HttpGet("{assignmentId:guid}/captains/me")]
+    public async Task<ActionResult<CaptainAssignmentContextDto>> GetMyContext(Guid assignmentId)
+    {
+        var result = await service.GetMyContextAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Выбрать себя капитаном задания
     /// </summary>
     [Authorize]

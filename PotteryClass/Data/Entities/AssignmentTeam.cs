@@ -7,6 +7,8 @@ public class AssignmentTeam
     public Assignment Assignment { get; set; } = null!;
     public Guid? CaptainUserId { get; set; }
     public User? CaptainUser { get; set; }
+    public Guid? FinalSubmissionId { get; set; }
+    public Submission? FinalSubmission { get; set; }
     public string Name { get; set; } = null!;
     public DateTime CreatedAtUtc { get; set; }
 

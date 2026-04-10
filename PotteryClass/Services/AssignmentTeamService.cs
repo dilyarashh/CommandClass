@@ -11,6 +11,7 @@ public class AssignmentTeamService(
     IAssignmentRepository assignmentRepository,
     IAssignmentCaptainRepository assignmentCaptainRepository,
     IAssignmentTeamRepository assignmentTeamRepository,
+    ISubmissionRepository submissionRepository,
     ICourseTeacherRepository teacherRepository,
     ICourseStudentRepository studentRepository,
     IUserRepository userRepository,
@@ -66,6 +67,18 @@ public class AssignmentTeamService(
     {
         if (assignment.TeamFormationMode != AssignmentTeamFormationMode.CaptainDraft)
             throw new BadRequestException("Драфт капитанов недоступен для этого задания");
+    }
+
+    private static void EnsureCaptainCanManageTeam(Assignment assignment)
+    {
+        if (!assignment.RequiresSubmission)
+            throw new BadRequestException("Для задания не требуется выбор финального решения");
+
+        if (!IsTeamCompositionLocked(assignment))
+            throw new BadRequestException("Состав команды еще не зафиксирован");
+
+        if (assignment.Deadline.HasValue && DateTime.UtcNow > assignment.Deadline.Value)
+            throw new BadRequestException("Дедлайн задания уже прошел");
     }
 
     private static void EnsureTeamFormationIsOpen(Assignment assignment)
@@ -174,6 +187,40 @@ public class AssignmentTeamService(
                 Email = x.Email,
                 IsBlocked = false
             }).ToList()
+        };
+    }
+
+    private static CaptainTeamDto MapCaptainTeam(AssignmentTeam team, List<Submission> submissions)
+    {
+        return new CaptainTeamDto
+        {
+            Id = team.Id,
+            AssignmentId = team.AssignmentId,
+            Name = team.Name,
+            Captain = new AssignmentCaptainDto
+            {
+                UserId = team.CaptainUserId!.Value,
+                FirstName = team.CaptainUser!.FirstName,
+                LastName = team.CaptainUser.LastName,
+                Email = team.CaptainUser.Email,
+                CreatedAtUtc = team.CreatedAtUtc
+            },
+            FinalSubmissionId = team.FinalSubmissionId,
+            Members = team.Members
+                .OrderBy(x => x.User.LastName)
+                .ThenBy(x => x.User.FirstName)
+                .Select(member => new CaptainTeamMemberSubmissionsDto
+                {
+                    UserId = member.UserId,
+                    FirstName = member.User.FirstName,
+                    LastName = member.User.LastName,
+                    MiddleName = member.User.MiddleName,
+                    Submissions = submissions
+                        .Where(x => x.StudentId == member.UserId)
+                        .Select(MapSubmission)
+                        .ToList()
+                })
+                .ToList()
         };
     }
 
@@ -463,6 +510,20 @@ public class AssignmentTeamService(
         return MapDraftState(assignment, teams, availableStudents);
     }
 
+    public async Task<CaptainTeamDto> GetCaptainTeamAsync(Guid assignmentId)
+    {
+        if (currentUser.GetRole() != UserRole.Student)
+            throw new ForbiddenException("Нет доступа");
+
+        var currentUserId = currentUser.GetUserId();
+        var team = await assignmentTeamRepository.GetCaptainTeamAsync(assignmentId, currentUserId)
+            ?? throw new ForbiddenException("Пользователь не является капитаном команды этого задания");
+
+        var memberIds = team.Members.Select(x => x.UserId).ToList();
+        var submissions = await submissionRepository.GetByAssignmentAndStudentsAsync(assignmentId, memberIds);
+        return MapCaptainTeam(team, submissions);
+    }
+
     public async Task<AssignmentDraftStateDto> StartDraftAsync(Guid assignmentId)
     {
         var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
@@ -552,6 +613,30 @@ public class AssignmentTeamService(
         return MapDraftState(assignment, teams, availableStudents);
     }
 
+    public async Task SelectFinalSubmissionAsync(Guid assignmentId, Guid submissionId)
+    {
+        if (currentUser.GetRole() != UserRole.Student)
+            throw new ForbiddenException("Нет доступа");
+
+        var currentUserId = currentUser.GetUserId();
+        var team = await assignmentTeamRepository.GetCaptainTeamAsync(assignmentId, currentUserId)
+            ?? throw new ForbiddenException("Пользователь не является капитаном команды этого задания");
+
+        EnsureCaptainCanManageTeam(team.Assignment);
+
+        var submission = await submissionRepository.GetByIdAsync(submissionId)
+            ?? throw new NotFoundException("Решение не найдено");
+
+        if (submission.AssignmentId != assignmentId)
+            throw new BadRequestException("Решение не относится к этому заданию");
+
+        if (team.Members.All(x => x.UserId != submission.StudentId))
+            throw new BadRequestException("Можно выбрать только решение участника своей команды");
+
+        team.FinalSubmissionId = submissionId;
+        await assignmentTeamRepository.SaveChangesAsync();
+    }
+
     public async Task LockCompositionAsync(Guid assignmentId)
     {
         var assignment = await assignmentRepository.GetByIdAsync(assignmentId)
@@ -582,6 +667,7 @@ public class AssignmentTeamService(
                     CreatedAtUtc = team.CreatedAtUtc
                 }
                 : null,
+            FinalSubmissionId = team.FinalSubmissionId,
             Name = team.Name,
             CreatedAtUtc = team.CreatedAtUtc,
             Members = team.Members.Select(x => new AssignmentTeamMemberDto
@@ -591,6 +677,31 @@ public class AssignmentTeamService(
                 LastName = x.User.LastName,
                 Email = x.User.Email,
                 CreatedAtUtc = x.CreatedAtUtc
+            }).ToList()
+        };
+    }
+
+    private static SubmissionDto MapSubmission(Submission submission)
+    {
+        return new SubmissionDto
+        {
+            Id = submission.Id,
+            AssignmentId = submission.AssignmentId,
+            StudentId = submission.StudentId,
+            FirstName = submission.Student?.FirstName,
+            LastName = submission.Student?.LastName,
+            MiddleName = submission.Student?.MiddleName,
+            Created = submission.Created,
+            Grade = submission.Grade,
+            Status = submission.Status,
+            Files = submission.Files.Select(f => new SubmissionFileDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                Url = f.Url,
+                MimeType = f.MimeType,
+                Size = f.Size,
+                Type = f.Type
             }).ToList()
         };
     }

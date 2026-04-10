@@ -82,6 +82,24 @@ public class AssignmentCaptainService(
         return captains.Select(Map).ToList();
     }
 
+    public async Task<CaptainAssignmentContextDto> GetMyContextAsync(Guid assignmentId)
+    {
+        var assignment = await GetAssignmentAsync(assignmentId);
+        await EnsureCourseMemberOrTeacherAsync(assignment);
+
+        var userId = currentUser.GetUserId();
+        var team = await assignmentTeamRepository.GetCaptainTeamAsync(assignmentId, userId);
+
+        return new CaptainAssignmentContextDto
+        {
+            AssignmentId = assignmentId,
+            IsCaptain = team is not null,
+            TeamId = team?.Id,
+            FinalSubmissionId = team?.FinalSubmissionId,
+            CanSelectFinalSubmission = team is not null && assignment.RequiresSubmission
+        };
+    }
+
     public async Task SelfAssignAsync(Guid assignmentId)
     {
         var assignment = await GetAssignmentAsync(assignmentId);

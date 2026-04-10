@@ -50,6 +50,16 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
             .ToListAsync();
     }
 
+    public async Task<List<Submission>> GetByAssignmentAndStudentsAsync(Guid assignmentId, IReadOnlyCollection<Guid> studentIds)
+    {
+        return await db.Submissions
+            .Include(x => x.Files)
+            .Include(x => x.Student)
+            .Where(x => x.AssignmentId == assignmentId && studentIds.Contains(x.StudentId))
+            .OrderByDescending(x => x.Created)
+            .ToListAsync();
+    }
+
     public async Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId)
     {
         return await (

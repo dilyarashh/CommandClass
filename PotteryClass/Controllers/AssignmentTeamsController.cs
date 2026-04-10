@@ -43,6 +43,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     }
 
     /// <summary>
+    /// Получить свою команду капитана и решения участников
+    /// </summary>
+    [Authorize]
+    [HttpGet("{assignmentId:guid}/teams/captain/my-team")]
+    public async Task<ActionResult<CaptainTeamDto>> GetCaptainTeam(Guid assignmentId)
+    {
+        var result = await service.GetCaptainTeamAsync(assignmentId);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Создать команду для задания
     /// </summary>
     [Authorize]
@@ -119,6 +130,17 @@ public class AssignmentTeamsController(IAssignmentTeamService service) : Control
     {
         var result = await service.DraftPickAsync(assignmentId, studentId);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Выбрать финальное решение команды
+    /// </summary>
+    [Authorize]
+    [HttpPost("{assignmentId:guid}/teams/captain/final-submission")]
+    public async Task<IActionResult> SelectFinalSubmission(Guid assignmentId, [FromBody] SelectFinalSubmissionRequest request)
+    {
+        await service.SelectFinalSubmissionAsync(assignmentId, request.SubmissionId);
+        return NoContent();
     }
 
     /// <summary>
