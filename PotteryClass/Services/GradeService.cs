@@ -95,16 +95,12 @@ public class GradeService(
         IReadOnlyDictionary<Guid, Data.Entities.Submission> latestSubmissionsByStudentId,
         IReadOnlyCollection<Data.Entities.Submission> allTeamSubmissions)
     {
-        var memberGrades = new List<int>();
-
         var members = team.Members
             .OrderBy(x => x.User.LastName)
             .ThenBy(x => x.User.FirstName)
             .Select(member =>
             {
                 latestSubmissionsByStudentId.TryGetValue(member.UserId, out var submission);
-                if (submission?.Grade.HasValue == true)
-                    memberGrades.Add(submission.Grade.Value);
 
                 return new TeamGradeMemberDto
                 {
@@ -120,8 +116,11 @@ public class GradeService(
             .ToList();
 
         decimal? teamGrade = null;
-        if (members.Count > 0 && memberGrades.Count == members.Count)
-            teamGrade = Math.Round((decimal)memberGrades.Average(), 2);
+        if (members.Count > 0)
+        {
+            var total = members.Sum(x => (decimal)(x.Grade ?? 0));
+            teamGrade = Math.Round(total / members.Count, 2);
+        }
 
         Data.Entities.Submission? finalSubmission = null;
         if (team.FinalSubmissionId.HasValue)
