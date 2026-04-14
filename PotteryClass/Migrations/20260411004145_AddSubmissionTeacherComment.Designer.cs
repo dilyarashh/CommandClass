@@ -2,8 +2,14 @@
 
 #nullable disable
 
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using PotteryClass.Data;
+
 namespace PotteryClass.Migrations
 {
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260411004145_AddSubmissionTeacherComment")]
     partial class AddSubmissionTeacherComment
     {
     }
