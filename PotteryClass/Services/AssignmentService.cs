@@ -77,7 +77,8 @@ public class AssignmentService(
         if (!assignment.IsVisible)
             throw new ForbiddenException("Задание скрыто");
 
-        if (assignment.StartsAtUtc.HasValue && DateTime.UtcNow < assignment.StartsAtUtc.Value)
+        var availableAtUtc = assignment.TeamFormationEndsAtUtc ?? assignment.StartsAtUtc;
+        if (availableAtUtc.HasValue && DateTime.UtcNow < availableAtUtc.Value)
             throw new ForbiddenException("Задание пока недоступно");
     }
 
@@ -132,7 +133,7 @@ public class AssignmentService(
         DateTime? startsAtUtc,
         DateTime? captainSelectionEndsAtUtc)
     {
-        return startsAtUtc ?? captainSelectionEndsAtUtc;
+        return captainSelectionEndsAtUtc ?? startsAtUtc;
     }
 
     private static void ValidateTeamFormationSchedule(
@@ -161,12 +162,12 @@ public class AssignmentService(
         if (assignment.TeamCompositionLockedAtUtc.HasValue)
             return true;
 
-        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+        return assignment.TeamFormationEndsAtUtc.HasValue && DateTime.UtcNow >= assignment.TeamFormationEndsAtUtc.Value;
     }
 
     private static bool IsClosed(Assignment assignment)
     {
-        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+        return assignment.TeamFormationEndsAtUtc.HasValue && DateTime.UtcNow >= assignment.TeamFormationEndsAtUtc.Value;
     }
 
     private static string ResolveStatus(Assignment assignment)
@@ -176,7 +177,8 @@ public class AssignmentService(
         if (assignment.Deadline.HasValue && now > assignment.Deadline.Value)
             return AssignmentStatus.Finished;
 
-        if (assignment.StartsAtUtc.HasValue && now < assignment.StartsAtUtc.Value)
+        var availableAtUtc = assignment.TeamFormationEndsAtUtc ?? assignment.StartsAtUtc;
+        if (availableAtUtc.HasValue && now < availableAtUtc.Value)
             return AssignmentStatus.Hidden;
 
         return AssignmentStatus.Available;

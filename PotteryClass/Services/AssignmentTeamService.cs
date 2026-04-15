@@ -85,7 +85,7 @@ public class AssignmentTeamService(
     {
         var now = DateTime.UtcNow;
 
-        if (assignment.StartsAtUtc.HasValue && now < assignment.StartsAtUtc.Value)
+        if (assignment.CaptainSelectionEndsAtUtc.HasValue && now < assignment.CaptainSelectionEndsAtUtc.Value)
             throw new BadRequestException("Формирование команд еще не началось");
 
         if (assignment.TeamFormationEndsAtUtc.HasValue && now > assignment.TeamFormationEndsAtUtc.Value)
@@ -97,7 +97,7 @@ public class AssignmentTeamService(
         if (assignment.TeamCompositionLockedAtUtc.HasValue)
             return true;
 
-        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+        return assignment.TeamFormationEndsAtUtc.HasValue && DateTime.UtcNow >= assignment.TeamFormationEndsAtUtc.Value;
     }
 
     private static void EnsureTeamCompositionUnlocked(Assignment assignment)

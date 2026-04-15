@@ -68,9 +68,6 @@ public class AssignmentCaptainService(
 
         if (assignment.CaptainSelectionEndsAtUtc.HasValue && now > assignment.CaptainSelectionEndsAtUtc.Value)
             throw new BadRequestException("Этап выбора капитанов уже завершен");
-
-        if (assignment.StartsAtUtc.HasValue && now >= assignment.StartsAtUtc.Value)
-            throw new BadRequestException("Этап выбора капитанов уже завершен");
     }
 
     private async Task EnsureCaptainLimitNotExceededAsync(Assignment assignment)
@@ -86,7 +83,6 @@ public class AssignmentCaptainService(
         if (maxCaptainsAllowed < 1)
             maxCaptainsAllowed = 1;
 
-        var minCaptainsNeeded = (int)Math.Ceiling(studentsCount / (double)maxTeamSize);
         var captainsCount = (await assignmentCaptainRepository.GetByAssignmentAsync(assignment.Id)).Count;
 
         if (captainsCount >= maxCaptainsAllowed)
