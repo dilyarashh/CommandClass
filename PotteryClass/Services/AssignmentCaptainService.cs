@@ -58,8 +58,8 @@ public class AssignmentCaptainService(
 
     private static void EnsureTeacherCaptainSelectionMode(Assignment assignment)
     {
-        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.TeacherManaged)
-            throw new BadRequestException("Ручное назначение капитанов недоступно для этого задания");
+        if (assignment.TeamFormationMode == AssignmentTeamFormationMode.StudentSelfSelection)
+            throw new BadRequestException("Ручное назначение капитанов недоступно в режиме самовыбора капитанов");
     }
 
     private static void EnsureCaptainSelectionIsOpen(Assignment assignment)
