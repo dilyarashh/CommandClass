@@ -303,9 +303,6 @@ public class AssignmentTeamService(
         if (assignment.TeamFormationMode == AssignmentTeamFormationMode.StudentSelfSelection)
             await EnsureCaptainTeamsCreatedAsync(assignment);
 
-        if (currentUser.GetRole() == UserRole.Student)
-            EnsureStudentSelfSelectionMode(assignment);
-
         var teams = await assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
         return teams.Select(Map).ToList();
     }
