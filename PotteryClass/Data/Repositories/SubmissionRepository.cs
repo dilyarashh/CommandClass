@@ -29,6 +29,8 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
     {
         return await db.Submissions
             .Include(x => x.Files)
+            .Include(x => x.Student)
+            .OrderByDescending(x => x.Created)
             .FirstOrDefaultAsync(x =>
                 x.AssignmentId == assignmentId &&
                 x.StudentId == studentId);
