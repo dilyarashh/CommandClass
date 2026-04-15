@@ -73,6 +73,31 @@ public class AssignmentCaptainService(
             throw new BadRequestException("Этап выбора капитанов уже завершен");
     }
 
+    private async Task EnsureCaptainLimitNotExceededAsync(Assignment assignment)
+    {
+        var activeStudentIds = await studentRepository.GetActiveStudentIdsAsync(assignment.CourseId);
+        var studentsCount = activeStudentIds.Count;
+        if (studentsCount == 0)
+            throw new BadRequestException("На курсе нет активных студентов для выбора капитанов");
+
+        var minTeamSize = Math.Max(1, assignment.MinTeamSize ?? 1);
+        var maxTeamSize = Math.Max(minTeamSize, assignment.MaxTeamSize ?? studentsCount);
+        var maxCaptainsAllowed = studentsCount / minTeamSize;
+        if (maxCaptainsAllowed < 1)
+            maxCaptainsAllowed = 1;
+
+        var minCaptainsNeeded = (int)Math.Ceiling(studentsCount / (double)maxTeamSize);
+        var captainsCount = (await assignmentCaptainRepository.GetByAssignmentAsync(assignment.Id)).Count;
+
+        if (captainsCount >= maxCaptainsAllowed)
+        {
+            throw new BadRequestException(
+                $"Слишком много капитанов для этого задания: активных студентов {studentsCount}, " +
+                $"минимальный размер команды {minTeamSize}, максимальный размер команды {maxTeamSize}, " +
+                $"капитанов уже {captainsCount}, максимум {maxCaptainsAllowed}");
+        }
+    }
+
     public async Task<List<AssignmentCaptainDto>> GetByAssignmentAsync(Guid assignmentId)
     {
         var assignment = await GetAssignmentAsync(assignmentId);
@@ -122,6 +147,8 @@ public class AssignmentCaptainService(
         if (isAlreadyInTeam)
             throw new BadRequestException("Нельзя выбрать капитаном участника уже сформированной команды");
 
+        await EnsureCaptainLimitNotExceededAsync(assignment);
+
         await assignmentCaptainRepository.AddAsync(new AssignmentCaptain
         {
             AssignmentId = assignmentId,
@@ -155,6 +182,8 @@ public class AssignmentCaptainService(
         var isAlreadyInTeam = await assignmentTeamRepository.IsStudentInAssignmentTeamsAsync(assignmentId, studentId);
         if (isAlreadyInTeam)
             throw new BadRequestException("Нельзя назначить капитаном участника уже сформированной команды");
+
+        await EnsureCaptainLimitNotExceededAsync(assignment);
 
         await assignmentCaptainRepository.AddAsync(new AssignmentCaptain
         {
