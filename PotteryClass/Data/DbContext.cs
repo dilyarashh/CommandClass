@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Assignment> Assignments { get; set; }
     public DbSet<AssignmentFile> AssignmentFiles { get; set; }
     public DbSet<Comment> Comments { get; set; }
+    public DbSet<CriterionGroup> CriterionGroups { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
     public DbSet<AssignmentCaptain> AssignmentCaptains { get; set; }
@@ -137,6 +138,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<CriterionGroup>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.Description)
+                .HasMaxLength(2000);
+
+            b.Property(x => x.SortOrder).IsRequired();
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.CriterionGroups)
+                .HasForeignKey(x => x.AssignmentId);
+
+            b.HasIndex(x => x.AssignmentId);
         });
 
         modelBuilder.Entity<Submission>(b =>

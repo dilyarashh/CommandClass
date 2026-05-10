@@ -53,6 +53,8 @@ builder.Services.AddScoped<ICourseService, CourseService>();
 
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<ICriterionGroupRepository, CriterionGroupRepository>();
+builder.Services.AddScoped<ICriterionGroupService, CriterionGroupService>();
 
 builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 builder.Services.AddScoped<IAssignmentCaptainRepository, AssignmentCaptainRepository>();
@@ -106,6 +108,7 @@ builder.Services.AddSwaggerGen(options =>
             "CourseStudents" => ["Студенты курса"],
             "CourseTeachers" => ["Преподаватели курса"],
             "Assignments" => ["Задания"],
+            "CriterionGroups" => ["Группы критериев"],
             "Comments" => ["Комментарии к заданиям"],
             "Submissions" => ["Решения"],
             "Grades" => ["Оценивание"],
