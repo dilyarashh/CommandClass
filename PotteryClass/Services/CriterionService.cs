@@ -15,7 +15,10 @@ public class CriterionService(
     ICourseTeacherRepository teacherRepository,
     ICurrentUser currentUser,
     IValidator<CreateCriterionRequest> createValidator,
-    IValidator<UpdateCriterionRequest> updateValidator)
+    IValidator<UpdateCriterionRequest> updateValidator,
+    IValidator<ScoreCriterionSettingsDto> scoreSettingsValidator,
+    IValidator<PassFailCriterionSettingsDto> passFailSettingsValidator,
+    IValidator<OptionCriterionSettingsDto> optionSettingsValidator)
     : ICriterionService
 {
     private async Task EnsureTeacherOrAdmin(Guid courseId)
@@ -29,7 +32,7 @@ public class CriterionService(
         var isTeacher = await teacherRepository.IsTeacherAsync(courseId, userId);
 
         if (!isTeacher)
-            throw new ForbiddenException("Нет доступа");
+            throw new ForbiddenException("РќРµС‚ РґРѕСЃС‚СѓРїР°");
     }
 
     private static async Task ValidateAndThrowAsync<T>(IValidator<T> validator, T dto)
@@ -50,6 +53,8 @@ public class CriterionService(
 
     private static CriterionDto Map(Criterion criterion)
     {
+        using var document = JsonDocument.Parse(criterion.Settings);
+
         return new CriterionDto
         {
             Id = criterion.Id,
@@ -57,7 +62,7 @@ public class CriterionService(
             Name = criterion.Name,
             Description = criterion.Description,
             Type = criterion.Type,
-            Settings = criterion.Settings,
+            Settings = document.RootElement.Clone(),
             MaxScore = criterion.MaxScore,
             SortOrder = criterion.SortOrder,
             CreatedAtUtc = criterion.CreatedAtUtc
@@ -67,56 +72,130 @@ public class CriterionService(
     private static string NormalizeType(string type)
         => type.Trim().ToLowerInvariant();
 
-    private static int ReadRequiredInt(JsonElement element, string propertyName)
+    private static T DeserializeSettings<T>(JsonElement? settings)
     {
-        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.Number ||
-            !property.TryGetInt32(out var value))
-            throw new BadRequestException("Некорректные настройки критерия");
+        if (!settings.HasValue || settings.Value.ValueKind == JsonValueKind.Null)
+            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
 
-        return value;
+        try
+        {
+            var result = settings.Value.Deserialize<T>();
+
+            if (result == null)
+                throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
+
+            return result;
+        }
+        catch (JsonException)
+        {
+            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
+        }
     }
 
-    private static string ValidateSettings(string type, string? settings, int maxScore)
+    private static async Task ValidateSettingsDtoAsync<T>(IValidator<T> validator, T dto)
+    {
+        var validationResult = await validator.ValidateAsync(dto);
+
+        if (validationResult.IsValid)
+            return;
+
+        var message = validationResult.Errors
+            .Select(x => x.ErrorMessage)
+            .FirstOrDefault() ?? "РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ";
+
+        throw new BadRequestException(message);
+    }
+
+    private static void ValidateUniqueOptionValues(List<CriterionOptionDto> options)
+    {
+        if (options.Select(x => x.Value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != options.Count)
+            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РІР°СЂРёР°РЅС‚С‹");
+    }
+
+    private static void ValidateScoreMappings(
+        IReadOnlyCollection<CriterionOptionDto> options,
+        IReadOnlyCollection<CriterionScoreMappingDto> scoreMappings,
+        int maxScore)
+    {
+        if (scoreMappings.Select(x => x.Value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != scoreMappings.Count)
+            throw new BadRequestException("Invalid score mapping");
+
+        var optionValues = options
+            .Select(x => x.Value.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (scoreMappings.Any(x => !optionValues.Contains(x.Value.Trim())))
+            throw new BadRequestException("Invalid score mapping");
+
+        if (scoreMappings.Any(x => x.Score < 0 || x.Score > maxScore))
+            throw new BadRequestException("Invalid score mapping");
+
+        if (scoreMappings.Count != optionValues.Count)
+            throw new BadRequestException("Invalid score mapping");
+    }
+
+    private static void ValidateRanges(IReadOnlyList<CriterionRangeDto> ranges, int minValue, int maxValue, int maxScore)
+    {
+        if (ranges.Count == 0)
+            return;
+
+        foreach (var range in ranges)
+        {
+            if (range.From < minValue || range.To > maxValue || range.To < range.From)
+                throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґРёР°РїР°Р·РѕРЅС‹");
+
+            if (range.Score < 0 || range.Score > maxScore)
+                throw new BadRequestException("Invalid score mapping");
+        }
+
+        var orderedRanges = ranges.OrderBy(x => x.From).ThenBy(x => x.To).ToList();
+
+        for (var i = 1; i < orderedRanges.Count; i++)
+        {
+            if (orderedRanges[i].From <= orderedRanges[i - 1].To)
+                throw new BadRequestException("РџРµСЂРµСЃРµРєР°СЋС‰РёРµСЃСЏ РґРёР°РїР°Р·РѕРЅС‹");
+        }
+    }
+
+    private async Task<string> ValidateSettingsAsync(string type, JsonElement? settings, int maxScore)
     {
         if (maxScore <= 0)
-            throw new BadRequestException("Некорректные настройки критерия");
+            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
 
         switch (type)
         {
             case CriterionTypeDto.Score:
             {
-                if (string.IsNullOrWhiteSpace(settings))
-                    throw new BadRequestException("Некорректные настройки критерия");
+                var dto = DeserializeSettings<ScoreCriterionSettingsDto>(settings);
+                await ValidateSettingsDtoAsync(scoreSettingsValidator, dto);
 
-                using var document = JsonDocument.Parse(settings);
-                var root = document.RootElement;
+                if (dto.MaxValue != maxScore)
+                    throw new BadRequestException("Invalid score mapping");
 
-                if (root.ValueKind != JsonValueKind.Object)
-                    throw new BadRequestException("Некорректные настройки критерия");
+                ValidateRanges(dto.Ranges ?? [], dto.MinValue, dto.MaxValue, maxScore);
 
-                var minValue = ReadRequiredInt(root, "minValue");
-                var maxValue = ReadRequiredInt(root, "maxValue");
-
-                if (minValue < 0 || maxValue < minValue || maxValue != maxScore)
-                    throw new BadRequestException("Некорректные настройки критерия");
-
-                return root.GetRawText();
+                return JsonSerializer.Serialize(dto);
             }
             case CriterionTypeDto.PassFail:
             {
-                if (string.IsNullOrWhiteSpace(settings))
-                    return "{}";
+                var dto = DeserializeSettings<PassFailCriterionSettingsDto>(settings);
+                await ValidateSettingsDtoAsync(passFailSettingsValidator, dto);
+                ValidateUniqueOptionValues(dto.Options);
+                ValidateScoreMappings(dto.Options, dto.ScoreMappings, maxScore);
 
-                using var document = JsonDocument.Parse(settings);
-                var root = document.RootElement;
+                return JsonSerializer.Serialize(dto);
+            }
+            case CriterionTypeDto.Option:
+            {
+                var dto = DeserializeSettings<OptionCriterionSettingsDto>(settings);
+                await ValidateSettingsDtoAsync(optionSettingsValidator, dto);
+                ValidateUniqueOptionValues(dto.Options);
+                ValidateScoreMappings(dto.Options, dto.ScoreMappings, maxScore);
 
-                if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Any())
-                    throw new BadRequestException("Некорректные настройки критерия");
-
-                return "{}";
+                return JsonSerializer.Serialize(dto);
             }
             default:
-                throw new BadRequestException("Некорректный тип критерия");
+                throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ С‚РёРї РєСЂРёС‚РµСЂРёСЏ");
         }
     }
 
@@ -127,12 +206,12 @@ public class CriterionService(
         var criterionGroup = await repository.GetCriterionGroupAsync(criterionGroupId);
 
         if (criterionGroup == null)
-            throw new NotFoundException("Группа критериев не найдена");
+            throw new NotFoundException("Р“СЂСѓРїРїР° РєСЂРёС‚РµСЂРёРµРІ РЅРµ РЅР°Р№РґРµРЅР°");
 
         await EnsureTeacherOrAdmin(criterionGroup.Assignment.CourseId);
 
         var type = NormalizeType(request.Type);
-        var settings = ValidateSettings(type, request.Settings, request.MaxScore);
+        var settings = await ValidateSettingsAsync(type, request.Settings, request.MaxScore);
 
         var criterion = new Criterion
         {
@@ -158,7 +237,7 @@ public class CriterionService(
         var criterionGroup = await repository.GetCriterionGroupAsync(criterionGroupId);
 
         if (criterionGroup == null)
-            throw new NotFoundException("Группа критериев не найдена");
+            throw new NotFoundException("Р“СЂСѓРїРїР° РєСЂРёС‚РµСЂРёРµРІ РЅРµ РЅР°Р№РґРµРЅР°");
 
         await EnsureTeacherOrAdmin(criterionGroup.Assignment.CourseId);
 
@@ -174,15 +253,25 @@ public class CriterionService(
         var criterion = await repository.GetByIdAsync(criterionId);
 
         if (criterion == null)
-            throw new NotFoundException("Критерий не найден");
+            throw new NotFoundException("РљСЂРёС‚РµСЂРёР№ РЅРµ РЅР°Р№РґРµРЅ");
 
         await EnsureTeacherOrAdmin(criterion.CriterionGroup.Assignment.CourseId);
 
         var nextType = request.Type is null ? criterion.Type : NormalizeType(request.Type);
-        var nextSettings = request.Settings ?? criterion.Settings;
         var nextMaxScore = request.MaxScore ?? criterion.MaxScore;
 
-        var validatedSettings = ValidateSettings(nextType, nextSettings, nextMaxScore);
+        JsonElement nextSettings;
+        if (request.Settings.HasValue)
+        {
+            nextSettings = request.Settings.Value;
+        }
+        else
+        {
+            using var existingSettingsDocument = JsonDocument.Parse(criterion.Settings);
+            nextSettings = existingSettingsDocument.RootElement.Clone();
+        }
+
+        var validatedSettings = await ValidateSettingsAsync(nextType, nextSettings, nextMaxScore);
 
         if (request.Name != null)
             criterion.Name = request.Name.Trim();
@@ -207,7 +296,7 @@ public class CriterionService(
         var criterion = await repository.GetByIdAsync(criterionId);
 
         if (criterion == null)
-            throw new NotFoundException("Критерий не найден");
+            throw new NotFoundException("РљСЂРёС‚РµСЂРёР№ РЅРµ РЅР°Р№РґРµРЅ");
 
         await EnsureTeacherOrAdmin(criterion.CriterionGroup.Assignment.CourseId);
 
