@@ -13,13 +13,20 @@ public class ScoreCriterionSettingsValidator : AbstractValidator<ScoreCriterionS
         RuleFor(x => x.MaxValue)
             .GreaterThanOrEqualTo(0);
 
+        RuleFor(x => x.SelectedValue)
+            .GreaterThanOrEqualTo(0);
+
         RuleFor(x => x)
-            .Must(x => x.MaxValue >= x.MinValue)
-            .WithMessage("Некорректные диапазоны");
+            .Must(x => x.MaxValue > x.MinValue)
+            .WithMessage("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґРёР°РїР°Р·РѕРЅС‹");
+
+        RuleFor(x => x)
+            .Must(x => x.SelectedValue >= x.MinValue && x.SelectedValue <= x.MaxValue)
+            .WithMessage("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґРёР°РїР°Р·РѕРЅС‹");
 
         RuleFor(x => x.Multiplier)
             .GreaterThanOrEqualTo(0)
             .When(x => x.Multiplier.HasValue)
-            .WithMessage("Отрицательные множители недопустимы");
+            .WithMessage("РћС‚СЂРёС†Р°С‚РµР»СЊРЅС‹Рµ РјРЅРѕР¶РёС‚РµР»Рё РЅРµРґРѕРїСѓСЃС‚РёРјС‹");
     }
 }

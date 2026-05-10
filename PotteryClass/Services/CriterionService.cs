@@ -18,7 +18,8 @@ public class CriterionService(
     IValidator<UpdateCriterionRequest> updateValidator,
     IValidator<ScoreCriterionSettingsDto> scoreSettingsValidator,
     IValidator<PassFailCriterionSettingsDto> passFailSettingsValidator,
-    IValidator<OptionCriterionSettingsDto> optionSettingsValidator)
+    IValidator<OptionCriterionSettingsDto> optionSettingsValidator,
+    IValidator<MultiplierCriterionSettingsDto> multiplierSettingsValidator)
     : ICriterionService
 {
     private async Task EnsureTeacherOrAdmin(Guid courseId)
@@ -75,20 +76,20 @@ public class CriterionService(
     private static T DeserializeSettings<T>(JsonElement? settings)
     {
         if (!settings.HasValue || settings.Value.ValueKind == JsonValueKind.Null)
-            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
+            throw new BadRequestException("Некорректные настройки критерия");
 
         try
         {
             var result = settings.Value.Deserialize<T>();
 
             if (result == null)
-                throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
+                throw new BadRequestException("Некорректные настройки критерия");
 
             return result;
         }
         catch (JsonException)
         {
-            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
+            throw new BadRequestException("Некорректные настройки критерия");
         }
     }
 
@@ -101,7 +102,7 @@ public class CriterionService(
 
         var message = validationResult.Errors
             .Select(x => x.ErrorMessage)
-            .FirstOrDefault() ?? "РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ";
+            .FirstOrDefault() ?? "Некорректные настройки критерия";
 
         throw new BadRequestException(message);
     }
@@ -109,7 +110,7 @@ public class CriterionService(
     private static void ValidateUniqueOptionValues(List<CriterionOptionDto> options)
     {
         if (options.Select(x => x.Value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != options.Count)
-            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РІР°СЂРёР°РЅС‚С‹");
+            throw new BadRequestException("Некорректные варианты");
     }
 
     private static void ValidateScoreMappings(
@@ -142,7 +143,7 @@ public class CriterionService(
         foreach (var range in ranges)
         {
             if (range.From < minValue || range.To > maxValue || range.To < range.From)
-                throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґРёР°РїР°Р·РѕРЅС‹");
+                throw new BadRequestException("Некорректные диапазоны");
 
             if (range.Score < 0 || range.Score > maxScore)
                 throw new BadRequestException("Invalid score mapping");
@@ -153,14 +154,14 @@ public class CriterionService(
         for (var i = 1; i < orderedRanges.Count; i++)
         {
             if (orderedRanges[i].From <= orderedRanges[i - 1].To)
-                throw new BadRequestException("РџРµСЂРµСЃРµРєР°СЋС‰РёРµСЃСЏ РґРёР°РїР°Р·РѕРЅС‹");
+                throw new BadRequestException("Пересекающиеся диапазоны");
         }
     }
 
     private async Task<string> ValidateSettingsAsync(string type, JsonElement? settings, int maxScore)
     {
         if (maxScore <= 0)
-            throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєСЂРёС‚РµСЂРёСЏ");
+            throw new BadRequestException("Некорректные настройки критерия");
 
         switch (type)
         {
@@ -194,8 +195,15 @@ public class CriterionService(
 
                 return JsonSerializer.Serialize(dto);
             }
+            case CriterionTypeDto.Multiplier:
+            {
+                var dto = DeserializeSettings<MultiplierCriterionSettingsDto>(settings);
+                await ValidateSettingsDtoAsync(multiplierSettingsValidator, dto);
+
+                return JsonSerializer.Serialize(dto);
+            }
             default:
-                throw new BadRequestException("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ С‚РёРї РєСЂРёС‚РµСЂРёСЏ");
+                throw new BadRequestException("Некорректный тип критерия");
         }
     }
 
@@ -206,7 +214,7 @@ public class CriterionService(
         var criterionGroup = await repository.GetCriterionGroupAsync(criterionGroupId);
 
         if (criterionGroup == null)
-            throw new NotFoundException("Р“СЂСѓРїРїР° РєСЂРёС‚РµСЂРёРµРІ РЅРµ РЅР°Р№РґРµРЅР°");
+            throw new NotFoundException("Группа критериев не найдена");
 
         await EnsureTeacherOrAdmin(criterionGroup.Assignment.CourseId);
 
@@ -237,7 +245,7 @@ public class CriterionService(
         var criterionGroup = await repository.GetCriterionGroupAsync(criterionGroupId);
 
         if (criterionGroup == null)
-            throw new NotFoundException("Р“СЂСѓРїРїР° РєСЂРёС‚РµСЂРёРµРІ РЅРµ РЅР°Р№РґРµРЅР°");
+            throw new NotFoundException("Группа критериев не найдена");
 
         await EnsureTeacherOrAdmin(criterionGroup.Assignment.CourseId);
 
@@ -253,7 +261,7 @@ public class CriterionService(
         var criterion = await repository.GetByIdAsync(criterionId);
 
         if (criterion == null)
-            throw new NotFoundException("РљСЂРёС‚РµСЂРёР№ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Критерий не найден");
 
         await EnsureTeacherOrAdmin(criterion.CriterionGroup.Assignment.CourseId);
 
@@ -296,7 +304,7 @@ public class CriterionService(
         var criterion = await repository.GetByIdAsync(criterionId);
 
         if (criterion == null)
-            throw new NotFoundException("РљСЂРёС‚РµСЂРёР№ РЅРµ РЅР°Р№РґРµРЅ");
+            throw new NotFoundException("Критерий не найден");
 
         await EnsureTeacherOrAdmin(criterion.CriterionGroup.Assignment.CourseId);
 

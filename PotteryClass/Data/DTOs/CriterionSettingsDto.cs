@@ -36,6 +36,7 @@ public class ScoreCriterionSettingsDto
 {
     public int MinValue { get; set; }
     public int MaxValue { get; set; }
+    public int SelectedValue { get; set; }
     public decimal? Multiplier { get; set; }
     public List<CriterionRangeDto>? Ranges { get; set; }
 }
@@ -60,4 +61,13 @@ public class OptionCriterionSettingsDto
     public decimal? Multiplier { get; set; }
     public List<CriterionOptionDto> Options { get; set; } = new();
     public List<CriterionScoreMappingDto> ScoreMappings { get; set; } = new();
+}
+
+/// <summary>
+/// Настройки критерия типа multiplier.
+/// Пример: { "coefficient": 1.5 }
+/// </summary>
+public class MultiplierCriterionSettingsDto
+{
+    public decimal Coefficient { get; set; }
 }
