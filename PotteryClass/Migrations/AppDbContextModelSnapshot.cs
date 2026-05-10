@@ -275,6 +275,49 @@ namespace PotteryClass.Migrations
                     b.ToTable("CriterionGroups");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.Criterion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CriterionGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("MaxScore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CriterionGroupId");
+
+                    b.ToTable("Criteria");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.Course", b =>
                 {
                     b.Property<Guid>("Id")
@@ -568,6 +611,17 @@ namespace PotteryClass.Migrations
                     b.Navigation("Assignment");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.Criterion", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.CriterionGroup", "CriterionGroup")
+                        .WithMany("Criteria")
+                        .HasForeignKey("CriterionGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CriterionGroup");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.CourseStudent", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Course", "Course")
@@ -648,6 +702,11 @@ namespace PotteryClass.Migrations
             modelBuilder.Entity("PotteryClass.Data.Entities.AssignmentTeam", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("PotteryClass.Data.Entities.CriterionGroup", b =>
+                {
+                    b.Navigation("Criteria");
                 });
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Course", b =>

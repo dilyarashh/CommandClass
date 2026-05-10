@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Assignment> Assignments { get; set; }
     public DbSet<AssignmentFile> AssignmentFiles { get; set; }
     public DbSet<Comment> Comments { get; set; }
+    public DbSet<Criterion> Criteria { get; set; }
     public DbSet<CriterionGroup> CriterionGroups { get; set; }
     public DbSet<Submission> Submissions { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
@@ -159,6 +160,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(x => x.AssignmentId);
 
             b.HasIndex(x => x.AssignmentId);
+        });
+
+        modelBuilder.Entity<Criterion>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.Description)
+                .HasMaxLength(2000);
+
+            b.Property(x => x.Type)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            b.Property(x => x.Settings)
+                .IsRequired();
+
+            b.Property(x => x.MaxScore).IsRequired();
+            b.Property(x => x.SortOrder).IsRequired();
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasOne(x => x.CriterionGroup)
+                .WithMany(x => x.Criteria)
+                .HasForeignKey(x => x.CriterionGroupId);
+
+            b.HasIndex(x => x.CriterionGroupId);
         });
 
         modelBuilder.Entity<Submission>(b =>
