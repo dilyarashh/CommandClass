@@ -10,4 +10,5 @@ public class CriterionGroup
     public DateTime CreatedAtUtc { get; set; }
 
     public Assignment Assignment { get; set; } = null!;
+    public ICollection<Criterion> Criteria { get; set; } = new List<Criterion>();
 }
