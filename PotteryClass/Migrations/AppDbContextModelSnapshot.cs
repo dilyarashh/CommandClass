@@ -244,6 +244,37 @@ namespace PotteryClass.Migrations
                     b.ToTable("Comments");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.CriterionGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.ToTable("CriterionGroups");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.Course", b =>
                 {
                     b.Property<Guid>("Id")
@@ -526,6 +557,17 @@ namespace PotteryClass.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.CriterionGroup", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("CriterionGroups")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.CourseStudent", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Course", "Course")
@@ -593,6 +635,8 @@ namespace PotteryClass.Migrations
                     b.Navigation("Captains");
 
                     b.Navigation("Comments");
+
+                    b.Navigation("CriterionGroups");
 
                     b.Navigation("Files");
 
