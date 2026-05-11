@@ -49,6 +49,9 @@ namespace PotteryClass.Migrations
                     b.Property<DateTime?>("DraftStartedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("GradingRules")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsVisible")
                         .HasColumnType("boolean");
 

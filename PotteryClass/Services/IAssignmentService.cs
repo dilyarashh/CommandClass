@@ -19,4 +19,6 @@ public interface IAssignmentService
         int page,
         int pageSize);
     Task UpdateVisibilityAsync(Guid id, bool isVisible);
+    Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId);
+    Task<AssignmentGradingRulesDto> UpdateGradingRulesAsync(Guid assignmentId, AssignmentGradingRulesDto dto);
 }

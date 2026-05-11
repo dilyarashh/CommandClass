@@ -90,6 +90,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(x => x.TeamFormationMode)
                 .HasConversion<int>()
                 .IsRequired();
+            b.Property(x => x.GradingRules);
             b.Property(x => x.Created).IsRequired();
             b.Property(x => x.IsVisible).IsRequired();
             b.Property(x => x.RequiresSubmission).IsRequired();

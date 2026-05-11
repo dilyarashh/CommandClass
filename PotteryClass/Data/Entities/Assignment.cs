@@ -20,6 +20,7 @@ public class Assignment
     public DateTime? DraftCompletedAtUtc { get; set; }
     public DateTime? TeamCompositionLockedAtUtc { get; set; }
     public DateTime? Deadline { get; set; }
+    public string? GradingRules { get; set; }
     public DateTime Created { get; set; }
     public bool IsVisible { get; set; }
     public bool RequiresSubmission { get; set; }
