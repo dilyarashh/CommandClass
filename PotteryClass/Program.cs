@@ -57,6 +57,7 @@ builder.Services.AddScoped<ICriterionGroupRepository, CriterionGroupRepository>(
 builder.Services.AddScoped<ICriterionGroupService, CriterionGroupService>();
 builder.Services.AddScoped<ICriterionRepository, CriterionRepository>();
 builder.Services.AddScoped<ICriterionService, CriterionService>();
+builder.Services.AddScoped<ISubmissionAssessmentRepository, SubmissionAssessmentRepository>();
 
 builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 builder.Services.AddScoped<IAssignmentCaptainRepository, AssignmentCaptainRepository>();

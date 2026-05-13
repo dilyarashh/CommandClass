@@ -7,6 +7,7 @@ public interface ICriterionRepository
     Task<CriterionGroup?> GetCriterionGroupAsync(Guid criterionGroupId);
     Task<Criterion?> GetByIdAsync(Guid criterionId);
     Task<List<Criterion>> GetByCriterionGroupIdAsync(Guid criterionGroupId);
+    Task<List<Criterion>> GetByAssignmentIdAsync(Guid assignmentId);
     Task AddAsync(Criterion criterion);
     void Delete(Criterion criterion);
     Task SaveChangesAsync();

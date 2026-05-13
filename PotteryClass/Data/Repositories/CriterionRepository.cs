@@ -23,6 +23,15 @@ public class CriterionRepository(AppDbContext db) : ICriterionRepository
             .ThenBy(x => x.CreatedAtUtc)
             .ToListAsync();
 
+    public Task<List<Criterion>> GetByAssignmentIdAsync(Guid assignmentId)
+        => db.Criteria
+            .Include(x => x.CriterionGroup)
+            .Where(x => x.CriterionGroup.AssignmentId == assignmentId)
+            .OrderBy(x => x.CriterionGroup.SortOrder)
+            .ThenBy(x => x.SortOrder)
+            .ThenBy(x => x.CreatedAtUtc)
+            .ToListAsync();
+
     public async Task AddAsync(Criterion criterion)
         => await db.Criteria.AddAsync(criterion);
 

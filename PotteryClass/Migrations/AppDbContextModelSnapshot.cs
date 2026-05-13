@@ -445,6 +445,68 @@ namespace PotteryClass.Migrations
                     b.ToTable("Submissions");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.SubmissionAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BonusPoints")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("CalculationDetails")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CheckedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CheckedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("CriterionValues")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("FinalGrade")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("MainPoints")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Multiplier")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("PenaltyPoints")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.HasIndex("CheckedByUserId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("SubmissionId")
+                        .IsUnique();
+
+                    b.ToTable("SubmissionAssessments");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -677,6 +739,35 @@ namespace PotteryClass.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.SubmissionAssessment", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", null)
+                        .WithMany()
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("CheckedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.Submission", "Submission")
+                        .WithOne("Assessment")
+                        .HasForeignKey("PotteryClass.Data.Entities.SubmissionAssessment", "SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Submission");
+                });
+
             modelBuilder.Entity("SubmissionFile", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Submission", "Submission")
@@ -726,6 +817,8 @@ namespace PotteryClass.Migrations
 
             modelBuilder.Entity("PotteryClass.Data.Entities.Submission", b =>
                 {
+                    b.Navigation("Assessment");
+
                     b.Navigation("Files");
                 });
 #pragma warning restore 612, 618
