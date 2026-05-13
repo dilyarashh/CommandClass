@@ -18,6 +18,10 @@ public class CreateCriterionValidator : AbstractValidator<CreateCriterionRequest
             .NotEmpty()
             .MaximumLength(64);
 
+        RuleFor(x => x.Category)
+            .MaximumLength(64)
+            .When(x => x.Category != null);
+
         RuleFor(x => x.MaxScore)
             .GreaterThan(0);
 

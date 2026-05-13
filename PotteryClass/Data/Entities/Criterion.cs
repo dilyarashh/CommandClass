@@ -7,6 +7,7 @@ public class Criterion
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public string Type { get; set; } = null!;
+    public string Category { get; set; } = null!;
     public string Settings { get; set; } = null!;
     public int MaxScore { get; set; }
     public int SortOrder { get; set; }

@@ -71,6 +71,7 @@ builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 
 builder.Services.AddScoped<IGradeService, GradeService>();
+builder.Services.AddScoped<IGradeCalculationService, GradeCalculationService>();
 
 builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("Minio"));
 

@@ -21,6 +21,11 @@ public class UpdateCriterionValidator : AbstractValidator<UpdateCriterionRequest
             .MaximumLength(64)
             .When(x => x.Type != null);
 
+        RuleFor(x => x.Category)
+            .NotEmpty()
+            .MaximumLength(64)
+            .When(x => x.Category != null);
+
         RuleFor(x => x.MaxScore)
             .GreaterThan(0)
             .When(x => x.MaxScore.HasValue);
