@@ -63,6 +63,7 @@ public class CriterionService(
             Name = criterion.Name,
             Description = criterion.Description,
             Type = criterion.Type,
+            Category = criterion.Category,
             Settings = document.RootElement.Clone(),
             MaxScore = criterion.MaxScore,
             SortOrder = criterion.SortOrder,
@@ -72,6 +73,25 @@ public class CriterionService(
 
     private static string NormalizeType(string type)
         => type.Trim().ToLowerInvariant();
+
+    private static string NormalizeCategory(string? category)
+        => string.IsNullOrWhiteSpace(category)
+            ? CriterionCategoryDto.Main
+            : category.Trim().ToLowerInvariant();
+
+    private static void ValidateCategoryForType(string type, string category)
+    {
+        var supportedCategory = category is CriterionCategoryDto.Main
+            or CriterionCategoryDto.Bonus
+            or CriterionCategoryDto.Penalty
+            or CriterionCategoryDto.Multiplier;
+
+        if (!supportedCategory)
+            throw new BadRequestException("Некорректная категория критерия");
+
+        if (type == CriterionTypeDto.Multiplier && category != CriterionCategoryDto.Multiplier)
+            throw new BadRequestException("Критерий-множитель должен иметь категорию multiplier");
+    }
 
     private static T DeserializeSettings<T>(JsonElement? settings)
     {
@@ -219,6 +239,8 @@ public class CriterionService(
         await EnsureTeacherOrAdmin(criterionGroup.Assignment.CourseId);
 
         var type = NormalizeType(request.Type);
+        var category = NormalizeCategory(request.Category);
+        ValidateCategoryForType(type, category);
         var settings = await ValidateSettingsAsync(type, request.Settings, request.MaxScore);
 
         var criterion = new Criterion
@@ -228,6 +250,7 @@ public class CriterionService(
             Name = request.Name.Trim(),
             Description = request.Description?.Trim(),
             Type = type,
+            Category = category,
             Settings = settings,
             MaxScore = request.MaxScore,
             SortOrder = request.SortOrder,
@@ -266,7 +289,9 @@ public class CriterionService(
         await EnsureTeacherOrAdmin(criterion.CriterionGroup.Assignment.CourseId);
 
         var nextType = request.Type is null ? criterion.Type : NormalizeType(request.Type);
+        var nextCategory = request.Category is null ? criterion.Category : NormalizeCategory(request.Category);
         var nextMaxScore = request.MaxScore ?? criterion.MaxScore;
+        ValidateCategoryForType(nextType, nextCategory);
 
         JsonElement nextSettings;
         if (request.Settings.HasValue)
@@ -291,6 +316,7 @@ public class CriterionService(
             criterion.SortOrder = request.SortOrder.Value;
 
         criterion.Type = nextType;
+        criterion.Category = nextCategory;
         criterion.Settings = validatedSettings;
         criterion.MaxScore = nextMaxScore;
 

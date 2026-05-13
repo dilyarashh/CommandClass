@@ -178,6 +178,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasMaxLength(64)
                 .IsRequired();
 
+            b.Property(x => x.Category)
+                .HasMaxLength(64)
+                .IsRequired();
+
             b.Property(x => x.Settings)
                 .IsRequired();
 
