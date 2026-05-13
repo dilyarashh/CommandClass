@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Criterion> Criteria { get; set; }
     public DbSet<CriterionGroup> CriterionGroups { get; set; }
     public DbSet<Submission> Submissions { get; set; }
+    public DbSet<SubmissionAssessment> SubmissionAssessments { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
     public DbSet<AssignmentCaptain> AssignmentCaptains { get; set; }
     public DbSet<AssignmentTeam> AssignmentTeams { get; set; }
@@ -209,6 +210,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.Student)
                 .WithMany()
                 .HasForeignKey(x => x.StudentId);
+        });
+
+        modelBuilder.Entity<SubmissionAssessment>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.CriterionValues).IsRequired();
+            b.Property(x => x.MainPoints).IsRequired();
+            b.Property(x => x.BonusPoints).IsRequired();
+            b.Property(x => x.PenaltyPoints).IsRequired();
+            b.Property(x => x.Multiplier).IsRequired();
+            b.Property(x => x.FinalGrade).IsRequired();
+            b.Property(x => x.CalculationDetails).IsRequired();
+            b.Property(x => x.CheckedAtUtc).IsRequired();
+            b.Property(x => x.Comment).HasMaxLength(4000);
+
+            b.HasIndex(x => x.SubmissionId).IsUnique();
+            b.HasIndex(x => x.AssignmentId);
+            b.HasIndex(x => x.StudentId);
+            b.HasIndex(x => x.CheckedByUserId);
+
+            b.HasOne(x => x.Submission)
+                .WithOne(x => x.Assessment)
+                .HasForeignKey<SubmissionAssessment>(x => x.SubmissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne<Assignment>()
+                .WithMany()
+                .HasForeignKey(x => x.AssignmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.CheckedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SubmissionFile>(b =>

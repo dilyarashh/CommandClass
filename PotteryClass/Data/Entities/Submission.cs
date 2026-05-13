@@ -16,4 +16,5 @@ public class Submission
     public DateTime? GradedAtUtc { get; set; }
     public SubmissionStatus Status { get; set; }
     public ICollection<SubmissionFile> Files { get; set; } = new List<SubmissionFile>();
+    public SubmissionAssessment? Assessment { get; set; }
 }

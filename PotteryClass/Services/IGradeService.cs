@@ -5,6 +5,7 @@ namespace PotteryClass.Services;
 public interface IGradeService
 {
     Task<SubmissionGradeDto> SetGradeAsync(Guid submissionId, SetSubmissionGradeRequest dto);
+    Task<SubmissionAssessmentDto> SaveAssessmentAsync(Guid submissionId, SaveSubmissionAssessmentRequest dto);
     Task DeleteGradeAsync(Guid submissionId);
     Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId);
     Task<List<MyCourseGradeDto>> GetMyCourseGradesAsync(Guid courseId);
