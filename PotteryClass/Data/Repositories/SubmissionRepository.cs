@@ -11,6 +11,7 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
         return await db.Submissions
             .Include(x => x.Files)
             .Include(x => x.Student)
+            .Include(x => x.Assessment)
             .FirstOrDefaultAsync(x => x.Id == submissionId);
     }
 
@@ -29,6 +30,7 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
     {
         return await db.Submissions
             .Include(x => x.Files)
+            .Include(x => x.Assessment)
             .FirstOrDefaultAsync(x =>
                 x.AssignmentId == assignmentId &&
                 x.StudentId == studentId);
@@ -45,6 +47,7 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
         return await db.Submissions
             .Include(x => x.Files)
             .Include(x => x.Student)
+            .Include(x => x.Assessment)
             .Where(x => x.AssignmentId == assignmentId)
             .OrderByDescending(x => x.Created)
             .ToListAsync();
@@ -55,6 +58,7 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
         return await db.Submissions
             .Include(x => x.Files)
             .Include(x => x.Student)
+            .Include(x => x.Assessment)
             .Where(x => x.AssignmentId == assignmentId && studentIds.Contains(x.StudentId))
             .OrderByDescending(x => x.Created)
             .ToListAsync();
@@ -62,34 +66,57 @@ public class SubmissionRepository(AppDbContext db) : ISubmissionRepository
 
     public async Task<List<CourseStudentGradeDto>> GetCourseGradesAsync(Guid courseId)
     {
-        return await (
-            from s in db.Submissions
-            join a in db.Assignments on s.AssignmentId equals a.Id
-            join u in db.Users on s.StudentId equals u.Id
-            where a.CourseId == courseId
-            select new CourseStudentGradeDto
-            {
-                StudentId = s.StudentId,
-                StudentName = u.FirstName + " " + u.LastName,
-                AssignmentId = s.AssignmentId,
-                AssignmentTitle = a.Title,
-                Grade = s.Grade
-            })
+        var submissions = await db.Submissions
+            .Include(x => x.Assessment)
+            .Include(x => x.Student)
+            .Join(
+                db.Assignments,
+                submission => submission.AssignmentId,
+                assignment => assignment.Id,
+                (submission, assignment) => new { submission, assignment })
+            .Where(x => x.assignment.CourseId == courseId)
             .ToListAsync();
+
+        return submissions
+            .Select(x => new CourseStudentGradeDto
+            {
+                StudentId = x.submission.StudentId,
+                StudentName = x.submission.Student.FirstName + " " + x.submission.Student.LastName,
+                AssignmentId = x.submission.AssignmentId,
+                AssignmentTitle = x.assignment.Title,
+                Grade = ResolveGrade(x.submission),
+                CalculatedGrade = x.submission.Assessment?.FinalGrade
+            })
+            .ToList();
     }
 
     public async Task<List<MyCourseGradeDto>> GetStudentCourseGradesAsync(Guid courseId, Guid studentId)
     {
-        return await (
-            from s in db.Submissions
-            join a in db.Assignments on s.AssignmentId equals a.Id
-            where a.CourseId == courseId && s.StudentId == studentId
-            select new MyCourseGradeDto
-            {
-                AssignmentId = s.AssignmentId,
-                AssignmentTitle = a.Title,
-                Grade = s.Grade
-            })
+        var submissions = await db.Submissions
+            .Include(x => x.Assessment)
+            .Join(
+                db.Assignments,
+                submission => submission.AssignmentId,
+                assignment => assignment.Id,
+                (submission, assignment) => new { submission, assignment })
+            .Where(x => x.assignment.CourseId == courseId && x.submission.StudentId == studentId)
             .ToListAsync();
+
+        return submissions
+            .Select(x => new MyCourseGradeDto
+            {
+                AssignmentId = x.submission.AssignmentId,
+                AssignmentTitle = x.assignment.Title,
+                Grade = ResolveGrade(x.submission),
+                CalculatedGrade = x.submission.Assessment?.FinalGrade
+            })
+            .ToList();
+    }
+
+    private static int? ResolveGrade(Submission submission)
+    {
+        return submission.Assessment is null
+            ? submission.Grade
+            : decimal.ToInt32(decimal.Round(submission.Assessment.FinalGrade, 0, MidpointRounding.AwayFromZero));
     }
 }

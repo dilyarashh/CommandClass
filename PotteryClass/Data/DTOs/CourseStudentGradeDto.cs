@@ -9,4 +9,5 @@ public class CourseStudentGradeDto
     public string AssignmentTitle { get; set; } = null!;
 
     public int? Grade { get; set; }
+    public decimal? CalculatedGrade { get; set; }
 }

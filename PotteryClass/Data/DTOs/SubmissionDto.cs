@@ -14,6 +14,7 @@ public class SubmissionDto
 
     public DateTime Created { get; set; }
     public int? Grade { get; set; }
+    public decimal? CalculatedGrade { get; set; }
     public string? TeacherComment { get; set; }
     public Guid? GradedByTeacherId { get; set; }
     public DateTime? GradedAtUtc { get; set; }

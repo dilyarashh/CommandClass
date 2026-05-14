@@ -32,6 +32,21 @@ public class GradeService(
         return (assignment, course);
     }
 
+    private async Task<(Data.Entities.Submission Submission, Data.Entities.Assignment Assignment, Data.Entities.Course Course)>
+        GetSubmissionAssignmentAndCourseAsync(Guid submissionId)
+    {
+        var submission = await submissionRepo.GetByIdAsync(submissionId)
+                         ?? throw new NotFoundException("Решение не найдено");
+
+        var assignment = await assignmentRepo.GetByIdAsync(submission.AssignmentId)
+                         ?? throw new NotFoundException("Задание не найдено");
+
+        var course = await courseRepo.GetByIdAsync(assignment.CourseId)
+                     ?? throw new NotFoundException("Курс не найден");
+
+        return (submission, assignment, course);
+    }
+
     private void EnsureTeacherOrAdmin(Data.Entities.Course course)
     {
         var teacherId = currentUser.GetUserId();
@@ -125,6 +140,22 @@ public class GradeService(
             CalculationDetails = detailsDocument.RootElement.Clone(),
             CheckedAtUtc = assessment.CheckedAtUtc,
             Comment = assessment.Comment
+        };
+    }
+
+    private static SubmissionAssessmentCriterionGroupDto MapAssessmentGroup(IGrouping<CriterionGroup, Criterion> group)
+    {
+        return new SubmissionAssessmentCriterionGroupDto
+        {
+            Id = group.Key.Id,
+            Name = group.Key.Name,
+            Description = group.Key.Description,
+            SortOrder = group.Key.SortOrder,
+            Criteria = group
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreatedAtUtc)
+                .Select(MapCriterion)
+                .ToList()
         };
     }
 
@@ -247,17 +278,45 @@ public class GradeService(
         return MapGrade(submission);
     }
 
+    public async Task<SubmissionAssessmentFormDto> GetAssessmentFormAsync(Guid submissionId)
+    {
+        var (submission, assignment, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
+        EnsureTeacherOrAdmin(course);
+
+        var criteria = await criterionRepository.GetByAssignmentIdAsync(assignment.Id);
+        var savedAssessment = await assessmentRepository.GetBySubmissionIdAsync(submissionId);
+
+        return new SubmissionAssessmentFormDto
+        {
+            SubmissionId = submission.Id,
+            AssignmentId = assignment.Id,
+            StudentId = submission.StudentId,
+            Rules = DeserializeGradingRules(assignment.GradingRules),
+            Groups = criteria
+                .Where(x => x.CriterionGroup != null)
+                .GroupBy(x => x.CriterionGroup)
+                .OrderBy(x => x.Key.SortOrder)
+                .ThenBy(x => x.Key.CreatedAtUtc)
+                .Select(MapAssessmentGroup)
+                .ToList(),
+            SavedAssessment = savedAssessment is null ? null : MapAssessment(savedAssessment)
+        };
+    }
+
+    public async Task<SubmissionAssessmentDto> GetAssessmentAsync(Guid submissionId)
+    {
+        var (_, _, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
+        EnsureTeacherOrAdmin(course);
+
+        var assessment = await assessmentRepository.GetBySubmissionIdAsync(submissionId)
+                         ?? throw new NotFoundException("Проверка решения не найдена");
+
+        return MapAssessment(assessment);
+    }
+
     public async Task<SubmissionAssessmentDto> SaveAssessmentAsync(Guid submissionId, SaveSubmissionAssessmentRequest dto)
     {
-        var submission = await submissionRepo.GetByIdAsync(submissionId)
-                         ?? throw new NotFoundException("Решение не найдено");
-
-        var assignment = await assignmentRepo.GetByIdAsync(submission.AssignmentId)
-                         ?? throw new NotFoundException("Задание не найдено");
-
-        var course = await courseRepo.GetByIdAsync(assignment.CourseId)
-                     ?? throw new NotFoundException("Курс не найден");
-
+        var (submission, assignment, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
         EnsureTeacherOrAdmin(course);
 
         var criteria = await criterionRepository.GetByAssignmentIdAsync(assignment.Id);
