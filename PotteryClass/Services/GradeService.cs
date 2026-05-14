@@ -77,11 +77,21 @@ public class GradeService(
             SubmissionId = submission.Id,
             AssignmentId = submission.AssignmentId,
             StudentId = submission.StudentId,
-            Grade = submission.Grade,
+            Grade = ResolveGrade(submission),
             TeacherComment = submission.TeacherComment,
             GradedByTeacherId = submission.GradedByTeacherId,
             GradedAtUtc = submission.GradedAtUtc
         };
+    }
+
+    private static int? ResolveGrade(Data.Entities.Submission? submission)
+    {
+        if (submission == null)
+            return null;
+
+        return submission.Assessment is null
+            ? submission.Grade
+            : decimal.ToInt32(decimal.Round(submission.Assessment.FinalGrade, 0, MidpointRounding.AwayFromZero));
     }
 
     private static AssignmentGradingRulesDto DeserializeGradingRules(string? gradingRules)
@@ -170,7 +180,8 @@ public class GradeService(
             LastName = submission.Student?.LastName,
             MiddleName = submission.Student?.MiddleName,
             Created = submission.Created,
-            Grade = submission.Grade,
+            Grade = ResolveGrade(submission),
+            CalculatedGrade = submission.Assessment?.FinalGrade,
             TeacherComment = submission.TeacherComment,
             GradedByTeacherId = submission.GradedByTeacherId,
             GradedAtUtc = submission.GradedAtUtc,
@@ -198,6 +209,7 @@ public class GradeService(
             .Select(member =>
             {
                 latestSubmissionsByStudentId.TryGetValue(member.UserId, out var submission);
+                var grade = ResolveGrade(submission);
 
                 return new TeamGradeMemberDto
                 {
@@ -206,7 +218,8 @@ public class GradeService(
                     LastName = member.User.LastName,
                     MiddleName = member.User.MiddleName,
                     SubmissionId = submission?.Id,
-                    Grade = submission?.Grade,
+                    Grade = grade,
+                    CalculatedGrade = submission?.Assessment?.FinalGrade,
                     TeacherComment = submission?.TeacherComment
                 };
             })
@@ -272,6 +285,12 @@ public class GradeService(
         submission.TeacherComment = string.IsNullOrWhiteSpace(dto.Comment) ? null : dto.Comment.Trim();
         submission.GradedByTeacherId = teacherId;
         submission.GradedAtUtc = DateTime.UtcNow;
+
+        if (submission.Assessment != null)
+        {
+            assessmentRepository.Delete(submission.Assessment);
+            submission.Assessment = null;
+        }
 
         await submissionRepo.SaveChangesAsync();
 
@@ -407,6 +426,12 @@ public class GradeService(
         submission.TeacherComment = null;
         submission.GradedByTeacherId = null;
         submission.GradedAtUtc = null;
+
+        if (submission.Assessment != null)
+        {
+            assessmentRepository.Delete(submission.Assessment);
+            submission.Assessment = null;
+        }
 
         await submissionRepo.SaveChangesAsync();
     }
