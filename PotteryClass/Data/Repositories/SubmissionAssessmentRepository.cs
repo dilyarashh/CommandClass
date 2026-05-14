@@ -11,6 +11,9 @@ public class SubmissionAssessmentRepository(AppDbContext db) : ISubmissionAssess
     public async Task AddAsync(SubmissionAssessment assessment)
         => await db.SubmissionAssessments.AddAsync(assessment);
 
+    public void Delete(SubmissionAssessment assessment)
+        => db.SubmissionAssessments.Remove(assessment);
+
     public Task SaveChangesAsync()
         => db.SaveChangesAsync();
 }
