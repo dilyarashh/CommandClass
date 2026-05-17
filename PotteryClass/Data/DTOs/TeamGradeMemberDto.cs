@@ -8,5 +8,6 @@ public class TeamGradeMemberDto
     public string? MiddleName { get; set; }
     public Guid? SubmissionId { get; set; }
     public int? Grade { get; set; }
+    public decimal? CalculatedGrade { get; set; }
     public string? TeacherComment { get; set; }
 }

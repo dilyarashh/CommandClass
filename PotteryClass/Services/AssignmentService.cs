@@ -1,9 +1,12 @@
+using System.Text.Json;
+using FluentValidation;
 using PotteryClass.Data.DTOs;
 using PotteryClass.Data.Entities;
 using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
 using PotteryClass.Infrastructure.Errors.Exceptions;
+using ValidationException = PotteryClass.Infrastructure.Errors.Exceptions.ValidationException;
 
 namespace PotteryClass.Services;
 
@@ -12,15 +15,18 @@ public class AssignmentService(
     ICourseTeacherRepository teacherRepository,
     ICourseStudentRepository studentRepository,
     ICurrentUser currentUser,
-    IFileStorageService fileStorage)
+    IFileStorageService fileStorage,
+    IValidator<AssignmentGradingRulesDto> gradingRulesValidator)
     : IAssignmentService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private readonly IAssignmentRepository _assignmentRepository = assignmentRepository;
     private readonly ICourseTeacherRepository _teacherRepository = teacherRepository;
     private readonly ICourseStudentRepository _studentRepository = studentRepository;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly IFileStorageService _fileStorage = fileStorage;
-
+    private readonly IValidator<AssignmentGradingRulesDto> _gradingRulesValidator = gradingRulesValidator;
 
     private async Task EnsureTeacherOrAdmin(Guid courseId)
     {
@@ -34,9 +40,9 @@ public class AssignmentService(
         var isTeacher = await _teacherRepository.IsTeacherAsync(courseId, userId);
 
         if (!isTeacher)
-            throw new ForbiddenException("Нет доступа");
+            throw new ForbiddenException("РќРµС‚ РґРѕСЃС‚СѓРїР°");
     }
-    
+
     private async Task EnsureCourseMember(Guid courseId)
     {
         var role = _currentUser.GetRole();
@@ -54,7 +60,7 @@ public class AssignmentService(
         var isStudent = await _studentRepository.IsStudentAsync(courseId, userId);
 
         if (!isStudent)
-            throw new ForbiddenException("Нет доступа");
+            throw new ForbiddenException("РќРµС‚ РґРѕСЃС‚СѓРїР°");
     }
 
     private async Task EnsureAssignmentVisibleToCurrentUser(Assignment assignment)
@@ -72,14 +78,30 @@ public class AssignmentService(
 
         var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
         if (!isStudent)
-            throw new ForbiddenException("Нет доступа");
+            throw new ForbiddenException("РќРµС‚ РґРѕСЃС‚СѓРїР°");
 
         if (!assignment.IsVisible)
-            throw new ForbiddenException("Задание скрыто");
+            throw new ForbiddenException("Р—Р°РґР°РЅРёРµ СЃРєСЂС‹С‚Рѕ");
 
         var availableAtUtc = assignment.TeamFormationEndsAtUtc ?? assignment.StartsAtUtc;
         if (availableAtUtc.HasValue && DateTime.UtcNow < availableAtUtc.Value)
             throw new ForbiddenException("Задание пока недоступно");
+    }
+
+    private static async Task ValidateAndThrowAsync<T>(IValidator<T> validator, T dto)
+    {
+        var validationResult = await validator.ValidateAsync(dto);
+
+        if (validationResult.IsValid)
+            return;
+
+        var errors = validationResult.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(e => e.ErrorMessage).ToArray());
+
+        throw new ValidationException(errors);
     }
 
     private static void ValidateAssignmentSchedule(
@@ -87,19 +109,19 @@ public class AssignmentService(
         DateTime? deadline)
     {
         if (startsAtUtc.HasValue && deadline.HasValue && startsAtUtc > deadline)
-            throw new BadRequestException("Дата старта должна быть раньше дедлайна");
+            throw new BadRequestException("Р”Р°С‚Р° СЃС‚Р°СЂС‚Р° РґРѕР»Р¶РЅР° Р±С‹С‚СЊ СЂР°РЅСЊС€Рµ РґРµРґР»Р°Р№РЅР°");
     }
 
     private static void ValidateTeamSize(int? minTeamSize, int? maxTeamSize)
     {
         if (minTeamSize.HasValue && minTeamSize.Value < 1)
-            throw new BadRequestException("Минимальный размер команды должен быть не меньше 1");
+            throw new BadRequestException("РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РєРѕРјР°РЅРґС‹ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РЅРµ РјРµРЅСЊС€Рµ 1");
 
         if (maxTeamSize.HasValue && maxTeamSize.Value < 1)
-            throw new BadRequestException("Максимальный размер команды должен быть не меньше 1");
+            throw new BadRequestException("РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РєРѕРјР°РЅРґС‹ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РЅРµ РјРµРЅСЊС€Рµ 1");
 
         if (minTeamSize.HasValue && maxTeamSize.HasValue && minTeamSize > maxTeamSize)
-            throw new BadRequestException("Минимальный размер команды должен быть не больше максимального");
+            throw new BadRequestException("РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РєРѕРјР°РЅРґС‹ РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РЅРµ Р±РѕР»СЊС€Рµ РјР°РєСЃРёРјР°Р»СЊРЅРѕРіРѕ");
     }
 
     private static AssignmentTeamFormationMode ParseTeamFormationMode(string? mode)
@@ -113,7 +135,7 @@ public class AssignmentService(
             AssignmentTeamFormationModeDto.StudentSelfSelection => AssignmentTeamFormationMode.StudentSelfSelection,
             AssignmentTeamFormationModeDto.RandomDistribution => AssignmentTeamFormationMode.RandomDistribution,
             AssignmentTeamFormationModeDto.CaptainDraft => AssignmentTeamFormationMode.CaptainDraft,
-            _ => throw new BadRequestException("Неизвестный режим формирования команд")
+            _ => throw new BadRequestException("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµР¶РёРј С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РєРѕРјР°РЅРґ")
         };
     }
 
@@ -146,15 +168,15 @@ public class AssignmentService(
 
         if (captainSelectionEndsAtUtc.HasValue && teamFormationStartsAtUtc.HasValue &&
             captainSelectionEndsAtUtc.Value > teamFormationStartsAtUtc.Value)
-            throw new BadRequestException("Этап выбора капитанов должен завершаться не позже старта формирования команд");
+            throw new BadRequestException("Р­С‚Р°Рї РІС‹Р±РѕСЂР° РєР°РїРёС‚Р°РЅРѕРІ РґРѕР»Р¶РµРЅ Р·Р°РІРµСЂС€Р°С‚СЊСЃСЏ РЅРµ РїРѕР·Р¶Рµ СЃС‚Р°СЂС‚Р° С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ РєРѕРјР°РЅРґ");
 
         if (teamFormationStartsAtUtc.HasValue && teamFormationEndsAtUtc.HasValue &&
             teamFormationStartsAtUtc.Value > teamFormationEndsAtUtc.Value)
-            throw new BadRequestException("Формирование команд должно завершаться не раньше старта формирования");
+            throw new BadRequestException("Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РєРѕРјР°РЅРґ РґРѕР»Р¶РЅРѕ Р·Р°РІРµСЂС€Р°С‚СЊСЃСЏ РЅРµ СЂР°РЅСЊС€Рµ СЃС‚Р°СЂС‚Р° С„РѕСЂРјРёСЂРѕРІР°РЅРёСЏ");
 
         if (teamFormationEndsAtUtc.HasValue && deadline.HasValue &&
             teamFormationEndsAtUtc.Value > deadline.Value)
-            throw new BadRequestException("Формирование команд должно завершаться не позже дедлайна задания");
+            throw new BadRequestException("Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РєРѕРјР°РЅРґ РґРѕР»Р¶РЅРѕ Р·Р°РІРµСЂС€Р°С‚СЊСЃСЏ РЅРµ РїРѕР·Р¶Рµ РґРµРґР»Р°Р№РЅР° Р·Р°РґР°РЅРёСЏ");
     }
 
     private static bool IsTeamCompositionLocked(Assignment assignment)
@@ -183,7 +205,102 @@ public class AssignmentService(
 
         return AssignmentStatus.Available;
     }
-    
+
+    private static AssignmentGradingRulesDto CreateDefaultGradingRules()
+    {
+        return new AssignmentGradingRulesDto
+        {
+            Mode = AssignmentGradingModeDto.SumPoints,
+            MainCriteriaThreshold = new MainCriteriaThresholdSettingsDto
+            {
+                Enabled = false
+            },
+            Penalties = new AssignmentPenaltySettingsDto
+            {
+                Deadline = new PenaltyRuleDto { Enabled = false },
+                Progress = new PenaltyRuleDto { Enabled = false },
+                RequiredCriteria = new PenaltyRuleDto { Enabled = false }
+            }
+        };
+    }
+
+    private static AssignmentGradingRulesDto DeserializeGradingRules(string? gradingRules)
+    {
+        if (string.IsNullOrWhiteSpace(gradingRules))
+            return CreateDefaultGradingRules();
+
+        try
+        {
+            var dto = JsonSerializer.Deserialize<AssignmentGradingRulesDto>(gradingRules, JsonOptions);
+            return dto ?? CreateDefaultGradingRules();
+        }
+        catch (JsonException)
+        {
+            throw new BadRequestException("Invalid assignment grading rules");
+        }
+    }
+
+    private static string NormalizeGradingMode(string mode)
+        => mode.Trim().ToLowerInvariant();
+
+    private static string? NormalizeThresholdBehavior(string? behavior)
+        => string.IsNullOrWhiteSpace(behavior)
+            ? null
+            : behavior.Trim().ToLowerInvariant();
+
+    private static void ValidatePenaltyRule(PenaltyRuleDto dto, string errorMessage)
+    {
+        if (!dto.Enabled)
+        {
+            if (dto.Percentage.HasValue)
+                throw new BadRequestException(errorMessage);
+
+            return;
+        }
+
+        if (!dto.Percentage.HasValue)
+            throw new BadRequestException(errorMessage);
+    }
+
+    private static void ValidateGradingRulesConsistency(AssignmentGradingRulesDto dto)
+    {
+        dto.Mode = NormalizeGradingMode(dto.Mode);
+        dto.MainCriteriaThreshold.Behavior = NormalizeThresholdBehavior(dto.MainCriteriaThreshold.Behavior);
+
+        if (dto.Mode == AssignmentGradingModeDto.SumPoints && dto.BaseGrade.HasValue)
+            throw new BadRequestException("Base grade is not supported for sum_points mode");
+
+        if (dto.Mode == AssignmentGradingModeDto.BaseWithMultipliers && !dto.BaseGrade.HasValue)
+            throw new BadRequestException("Base grade is required for base_with_multipliers mode");
+
+        if (!dto.MainCriteriaThreshold.Enabled)
+        {
+            if (dto.MainCriteriaThreshold.Threshold.HasValue || dto.MainCriteriaThreshold.Behavior is not null)
+                throw new BadRequestException("Main criteria threshold settings conflict");
+        }
+        else
+        {
+            if (!dto.MainCriteriaThreshold.Threshold.HasValue)
+                throw new BadRequestException("Main criteria threshold is required");
+
+            if (string.IsNullOrWhiteSpace(dto.MainCriteriaThreshold.Behavior))
+                throw new BadRequestException("Main criteria threshold behavior is required");
+        }
+
+        ValidatePenaltyRule(dto.Penalties.Deadline, "Deadline penalty settings conflict");
+        ValidatePenaltyRule(dto.Penalties.Progress, "Progress penalty settings conflict");
+        ValidatePenaltyRule(dto.Penalties.RequiredCriteria, "Required criteria penalty settings conflict");
+    }
+
+    private async Task<Assignment> GetAssignmentForTeacherAsync(Guid assignmentId)
+    {
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+        return assignment;
+    }
+
     public async Task<AssignmentDto> CreateAsync(CreateAssignmentRequest dto)
     {
         var userId = _currentUser.GetUserId();
@@ -193,7 +310,7 @@ public class AssignmentService(
         ValidateAssignmentSchedule(dto.StartsAtUtc, dto.Deadline);
         ValidateTeamSize(dto.MinTeamSize, dto.MaxTeamSize);
         ValidateTeamFormationSchedule(dto.StartsAtUtc, dto.CaptainSelectionEndsAtUtc, dto.TeamFormationEndsAtUtc, dto.Deadline);
-        
+
         var assignment = new Assignment
         {
             Id = Guid.NewGuid(),
@@ -210,6 +327,7 @@ public class AssignmentService(
             RequiresSubmission = dto.RequiresSubmission,
             IsVisible = dto.IsVisible,
             Deadline = dto.Deadline,
+            GradingRules = JsonSerializer.Serialize(CreateDefaultGradingRules(), JsonOptions),
             Created = DateTime.UtcNow
         };
 
@@ -221,17 +339,17 @@ public class AssignmentService(
     public async Task<AssignmentDto> GetByIdAsync(Guid id)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(id)
-            ?? throw new NotFoundException("Задание не найдено");
+            ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
 
         await EnsureAssignmentVisibleToCurrentUser(assignment);
-        
+
         return MapAssignment(assignment);
     }
 
     public async Task<AssignmentDto> UpdateAsync(Guid id, UpdateAssignmentRequest dto)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(id)
-            ?? throw new NotFoundException("Задание не найдено");
+            ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
 
@@ -248,7 +366,7 @@ public class AssignmentService(
         ValidateAssignmentSchedule(nextStartsAtUtc, nextDeadline);
         ValidateTeamSize(nextMinTeamSize, nextMaxTeamSize);
         ValidateTeamFormationSchedule(nextStartsAtUtc, nextCaptainSelectionEndsAtUtc, nextTeamFormationEndsAtUtc, nextDeadline);
-        
+
         if (dto.Title is not null)
             assignment.Title = dto.Title.Trim();
 
@@ -290,10 +408,10 @@ public class AssignmentService(
     public async Task DeleteAsync(Guid id)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(id)
-            ?? throw new NotFoundException("Задание не найдено");
+            ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
-        
+
         await _assignmentRepository.DeleteAsync(assignment);
     }
 
@@ -325,11 +443,11 @@ public class AssignmentService(
             Created = assignment.Created
         };
     }
-    
+
     public async Task<List<AssignmentFileDto>> AddFileAsync(Guid assignmentId, AssignmentFilesFormRequest dto)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
-                         ?? throw new NotFoundException("Задание не найдено");
+                         ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
 
@@ -374,7 +492,7 @@ public class AssignmentService(
     public async Task DeleteFileAsync(Guid assignmentId, List<Guid> fileIds)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
-                         ?? throw new NotFoundException("Задание не найдено");
+                         ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
 
@@ -447,7 +565,7 @@ public class AssignmentService(
             PageSize = pageSize
         };
     }
-    
+
     private static AssignmentDto MapAssignment(Assignment assignment)
     {
         return new AssignmentDto
@@ -488,11 +606,30 @@ public class AssignmentService(
     public async Task UpdateVisibilityAsync(Guid id, bool isVisible)
     {
         var assignment = await _assignmentRepository.GetByIdAsync(id)
-            ?? throw new NotFoundException("Задание не найдено");
+            ?? throw new NotFoundException("Р—Р°РґР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ");
 
         await EnsureTeacherOrAdmin(assignment.CourseId);
 
         assignment.IsVisible = isVisible;
         await _assignmentRepository.UpdateAsync(assignment);
+    }
+
+    public async Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId)
+    {
+        var assignment = await GetAssignmentForTeacherAsync(assignmentId);
+        return DeserializeGradingRules(assignment.GradingRules);
+    }
+
+    public async Task<AssignmentGradingRulesDto> UpdateGradingRulesAsync(Guid assignmentId, AssignmentGradingRulesDto dto)
+    {
+        await ValidateAndThrowAsync(_gradingRulesValidator, dto);
+        ValidateGradingRulesConsistency(dto);
+
+        var assignment = await GetAssignmentForTeacherAsync(assignmentId);
+        assignment.GradingRules = JsonSerializer.Serialize(dto, JsonOptions);
+
+        await _assignmentRepository.UpdateAsync(assignment);
+
+        return DeserializeGradingRules(assignment.GradingRules);
     }
 }

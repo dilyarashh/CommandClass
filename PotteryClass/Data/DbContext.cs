@@ -14,7 +14,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Assignment> Assignments { get; set; }
     public DbSet<AssignmentFile> AssignmentFiles { get; set; }
     public DbSet<Comment> Comments { get; set; }
+    public DbSet<Criterion> Criteria { get; set; }
+    public DbSet<CriterionGroup> CriterionGroups { get; set; }
     public DbSet<Submission> Submissions { get; set; }
+    public DbSet<SubmissionAssessment> SubmissionAssessments { get; set; }
     public DbSet<SubmissionFile> SubmissionFiles { get; set; }
     public DbSet<AssignmentCaptain> AssignmentCaptains { get; set; }
     public DbSet<AssignmentTeam> AssignmentTeams { get; set; }
@@ -88,6 +91,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(x => x.TeamFormationMode)
                 .HasConversion<int>()
                 .IsRequired();
+            b.Property(x => x.GradingRules);
             b.Property(x => x.Created).IsRequired();
             b.Property(x => x.IsVisible).IsRequired();
             b.Property(x => x.RequiresSubmission).IsRequired();
@@ -139,6 +143,60 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(x => x.UserId);
         });
 
+        modelBuilder.Entity<CriterionGroup>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.Description)
+                .HasMaxLength(2000);
+
+            b.Property(x => x.SortOrder).IsRequired();
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.CriterionGroups)
+                .HasForeignKey(x => x.AssignmentId);
+
+            b.HasIndex(x => x.AssignmentId);
+        });
+
+        modelBuilder.Entity<Criterion>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            b.Property(x => x.Description)
+                .HasMaxLength(2000);
+
+            b.Property(x => x.Type)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            b.Property(x => x.Category)
+                .HasMaxLength(64)
+                .IsRequired();
+
+            b.Property(x => x.Settings)
+                .IsRequired();
+
+            b.Property(x => x.MaxScore).IsRequired();
+            b.Property(x => x.SortOrder).IsRequired();
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasOne(x => x.CriterionGroup)
+                .WithMany(x => x.Criteria)
+                .HasForeignKey(x => x.CriterionGroupId);
+
+            b.HasIndex(x => x.CriterionGroupId);
+        });
+
         modelBuilder.Entity<Submission>(b =>
         {
             b.HasKey(x => x.Id);
@@ -152,6 +210,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.Student)
                 .WithMany()
                 .HasForeignKey(x => x.StudentId);
+        });
+
+        modelBuilder.Entity<SubmissionAssessment>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.CriterionValues).IsRequired();
+            b.Property(x => x.MainPoints).IsRequired();
+            b.Property(x => x.BonusPoints).IsRequired();
+            b.Property(x => x.PenaltyPoints).IsRequired();
+            b.Property(x => x.Multiplier).IsRequired();
+            b.Property(x => x.FinalGrade).IsRequired();
+            b.Property(x => x.CalculationDetails).IsRequired();
+            b.Property(x => x.CheckedAtUtc).IsRequired();
+            b.Property(x => x.Comment).HasMaxLength(4000);
+
+            b.HasIndex(x => x.SubmissionId).IsUnique();
+            b.HasIndex(x => x.AssignmentId);
+            b.HasIndex(x => x.StudentId);
+            b.HasIndex(x => x.CheckedByUserId);
+
+            b.HasOne(x => x.Submission)
+                .WithOne(x => x.Assessment)
+                .HasForeignKey<SubmissionAssessment>(x => x.SubmissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne<Assignment>()
+                .WithMany()
+                .HasForeignKey(x => x.AssignmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.StudentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.CheckedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SubmissionFile>(b =>

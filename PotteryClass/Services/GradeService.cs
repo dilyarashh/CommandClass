@@ -1,4 +1,6 @@
+using System.Text.Json;
 using PotteryClass.Data.DTOs;
+using PotteryClass.Data.Entities;
 using PotteryClass.Data.Entities.Enums;
 using PotteryClass.Data.Repositories;
 using PotteryClass.Infrastructure.Auth;
@@ -8,12 +10,17 @@ namespace PotteryClass.Services;
 
 public class GradeService(
     ISubmissionRepository submissionRepo,
+    ISubmissionAssessmentRepository assessmentRepository,
     IAssignmentRepository assignmentRepo,
+    ICriterionRepository criterionRepository,
     IAssignmentTeamRepository assignmentTeamRepository,
     ICourseRepository courseRepo,
+    IGradeCalculationService gradeCalculationService,
     ICurrentUser currentUser)
     : IGradeService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     private async Task<(Data.Entities.Assignment Assignment, Data.Entities.Course Course)> GetAssignmentAndCourseAsync(Guid assignmentId)
     {
         var assignment = await assignmentRepo.GetByIdAsync(assignmentId)
@@ -23,6 +30,21 @@ public class GradeService(
                      ?? throw new NotFoundException("Курс не найден");
 
         return (assignment, course);
+    }
+
+    private async Task<(Data.Entities.Submission Submission, Data.Entities.Assignment Assignment, Data.Entities.Course Course)>
+        GetSubmissionAssignmentAndCourseAsync(Guid submissionId)
+    {
+        var submission = await submissionRepo.GetByIdAsync(submissionId)
+                         ?? throw new NotFoundException("Решение не найдено");
+
+        var assignment = await assignmentRepo.GetByIdAsync(submission.AssignmentId)
+                         ?? throw new NotFoundException("Задание не найдено");
+
+        var course = await courseRepo.GetByIdAsync(assignment.CourseId)
+                     ?? throw new NotFoundException("Курс не найден");
+
+        return (submission, assignment, course);
     }
 
     private void EnsureTeacherOrAdmin(Data.Entities.Course course)
@@ -55,10 +77,95 @@ public class GradeService(
             SubmissionId = submission.Id,
             AssignmentId = submission.AssignmentId,
             StudentId = submission.StudentId,
-            Grade = submission.Grade,
+            Grade = ResolveGrade(submission),
             TeacherComment = submission.TeacherComment,
             GradedByTeacherId = submission.GradedByTeacherId,
             GradedAtUtc = submission.GradedAtUtc
+        };
+    }
+
+    private static int? ResolveGrade(Data.Entities.Submission? submission)
+    {
+        if (submission == null)
+            return null;
+
+        return submission.Assessment is null
+            ? submission.Grade
+            : decimal.ToInt32(decimal.Round(submission.Assessment.FinalGrade, 0, MidpointRounding.AwayFromZero));
+    }
+
+    private static AssignmentGradingRulesDto DeserializeGradingRules(string? gradingRules)
+    {
+        if (string.IsNullOrWhiteSpace(gradingRules))
+            return new AssignmentGradingRulesDto();
+
+        try
+        {
+            return JsonSerializer.Deserialize<AssignmentGradingRulesDto>(gradingRules, JsonOptions)
+                   ?? new AssignmentGradingRulesDto();
+        }
+        catch (JsonException)
+        {
+            throw new BadRequestException("Invalid assignment grading rules");
+        }
+    }
+
+    private static CriterionDto MapCriterion(Criterion criterion)
+    {
+        using var document = JsonDocument.Parse(criterion.Settings);
+
+        return new CriterionDto
+        {
+            Id = criterion.Id,
+            CriterionGroupId = criterion.CriterionGroupId,
+            Name = criterion.Name,
+            Description = criterion.Description,
+            Type = criterion.Type,
+            Category = criterion.Category,
+            Settings = document.RootElement.Clone(),
+            MaxScore = criterion.MaxScore,
+            SortOrder = criterion.SortOrder,
+            CreatedAtUtc = criterion.CreatedAtUtc
+        };
+    }
+
+    private static SubmissionAssessmentDto MapAssessment(SubmissionAssessment assessment)
+    {
+        using var valuesDocument = JsonDocument.Parse(assessment.CriterionValues);
+        using var detailsDocument = JsonDocument.Parse(assessment.CalculationDetails);
+
+        return new SubmissionAssessmentDto
+        {
+            Id = assessment.Id,
+            SubmissionId = assessment.SubmissionId,
+            AssignmentId = assessment.AssignmentId,
+            StudentId = assessment.StudentId,
+            CheckedByUserId = assessment.CheckedByUserId,
+            CriterionValues = valuesDocument.RootElement.Clone(),
+            MainPoints = assessment.MainPoints,
+            BonusPoints = assessment.BonusPoints,
+            PenaltyPoints = assessment.PenaltyPoints,
+            Multiplier = assessment.Multiplier,
+            FinalGrade = assessment.FinalGrade,
+            CalculationDetails = detailsDocument.RootElement.Clone(),
+            CheckedAtUtc = assessment.CheckedAtUtc,
+            Comment = assessment.Comment
+        };
+    }
+
+    private static SubmissionAssessmentCriterionGroupDto MapAssessmentGroup(IGrouping<CriterionGroup, Criterion> group)
+    {
+        return new SubmissionAssessmentCriterionGroupDto
+        {
+            Id = group.Key.Id,
+            Name = group.Key.Name,
+            Description = group.Key.Description,
+            SortOrder = group.Key.SortOrder,
+            Criteria = group
+                .OrderBy(x => x.SortOrder)
+                .ThenBy(x => x.CreatedAtUtc)
+                .Select(MapCriterion)
+                .ToList()
         };
     }
 
@@ -73,7 +180,8 @@ public class GradeService(
             LastName = submission.Student?.LastName,
             MiddleName = submission.Student?.MiddleName,
             Created = submission.Created,
-            Grade = submission.Grade,
+            Grade = ResolveGrade(submission),
+            CalculatedGrade = submission.Assessment?.FinalGrade,
             TeacherComment = submission.TeacherComment,
             GradedByTeacherId = submission.GradedByTeacherId,
             GradedAtUtc = submission.GradedAtUtc,
@@ -101,6 +209,7 @@ public class GradeService(
             .Select(member =>
             {
                 latestSubmissionsByStudentId.TryGetValue(member.UserId, out var submission);
+                var grade = ResolveGrade(submission);
 
                 return new TeamGradeMemberDto
                 {
@@ -109,7 +218,8 @@ public class GradeService(
                     LastName = member.User.LastName,
                     MiddleName = member.User.MiddleName,
                     SubmissionId = submission?.Id,
-                    Grade = submission?.Grade,
+                    Grade = grade,
+                    CalculatedGrade = submission?.Assessment?.FinalGrade,
                     TeacherComment = submission?.TeacherComment
                 };
             })
@@ -176,9 +286,107 @@ public class GradeService(
         submission.GradedByTeacherId = teacherId;
         submission.GradedAtUtc = DateTime.UtcNow;
 
+        if (submission.Assessment != null)
+        {
+            assessmentRepository.Delete(submission.Assessment);
+            submission.Assessment = null;
+        }
+
         await submissionRepo.SaveChangesAsync();
 
         return MapGrade(submission);
+    }
+
+    public async Task<SubmissionAssessmentFormDto> GetAssessmentFormAsync(Guid submissionId)
+    {
+        var (submission, assignment, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
+        EnsureTeacherOrAdmin(course);
+
+        var criteria = await criterionRepository.GetByAssignmentIdAsync(assignment.Id);
+        var savedAssessment = await assessmentRepository.GetBySubmissionIdAsync(submissionId);
+
+        return new SubmissionAssessmentFormDto
+        {
+            SubmissionId = submission.Id,
+            AssignmentId = assignment.Id,
+            StudentId = submission.StudentId,
+            Rules = DeserializeGradingRules(assignment.GradingRules),
+            Groups = criteria
+                .Where(x => x.CriterionGroup != null)
+                .GroupBy(x => x.CriterionGroup)
+                .OrderBy(x => x.Key.SortOrder)
+                .ThenBy(x => x.Key.CreatedAtUtc)
+                .Select(MapAssessmentGroup)
+                .ToList(),
+            SavedAssessment = savedAssessment is null ? null : MapAssessment(savedAssessment)
+        };
+    }
+
+    public async Task<SubmissionAssessmentDto> GetAssessmentAsync(Guid submissionId)
+    {
+        var (_, _, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
+        EnsureTeacherOrAdmin(course);
+
+        var assessment = await assessmentRepository.GetBySubmissionIdAsync(submissionId)
+                         ?? throw new NotFoundException("Проверка решения не найдена");
+
+        return MapAssessment(assessment);
+    }
+
+    public async Task<SubmissionAssessmentDto> SaveAssessmentAsync(Guid submissionId, SaveSubmissionAssessmentRequest dto)
+    {
+        var (submission, assignment, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
+        EnsureTeacherOrAdmin(course);
+
+        var criteria = await criterionRepository.GetByAssignmentIdAsync(assignment.Id);
+        var calculation = gradeCalculationService.Calculate(new GradeCalculationRequest
+        {
+            Rules = DeserializeGradingRules(assignment.GradingRules),
+            Criteria = criteria.Select(MapCriterion).ToList(),
+            Values = dto.Values,
+            Penalties = dto.Penalties
+        });
+
+        var checkedByUserId = currentUser.GetUserId();
+        var checkedAtUtc = DateTime.UtcNow;
+        var comment = string.IsNullOrWhiteSpace(dto.Comment) ? null : dto.Comment.Trim();
+        var criterionValues = JsonSerializer.Serialize(dto.Values, JsonOptions);
+        var calculationDetails = JsonSerializer.Serialize(calculation, JsonOptions);
+
+        var assessment = await assessmentRepository.GetBySubmissionIdAsync(submissionId);
+
+        if (assessment == null)
+        {
+            assessment = new SubmissionAssessment
+            {
+                Id = Guid.NewGuid(),
+                SubmissionId = submission.Id,
+                AssignmentId = submission.AssignmentId,
+                StudentId = submission.StudentId
+            };
+
+            await assessmentRepository.AddAsync(assessment);
+        }
+
+        assessment.CheckedByUserId = checkedByUserId;
+        assessment.CriterionValues = criterionValues;
+        assessment.MainPoints = calculation.MainPoints;
+        assessment.BonusPoints = calculation.BonusPoints;
+        assessment.PenaltyPoints = calculation.PenaltyPoints;
+        assessment.Multiplier = calculation.Multiplier;
+        assessment.FinalGrade = calculation.FinalGrade;
+        assessment.CalculationDetails = calculationDetails;
+        assessment.CheckedAtUtc = checkedAtUtc;
+        assessment.Comment = comment;
+
+        submission.Grade = decimal.ToInt32(decimal.Round(calculation.FinalGrade, 0, MidpointRounding.AwayFromZero));
+        submission.TeacherComment = comment;
+        submission.GradedByTeacherId = checkedByUserId;
+        submission.GradedAtUtc = checkedAtUtc;
+
+        await assessmentRepository.SaveChangesAsync();
+
+        return MapAssessment(assessment);
     }
 
     public async Task DeleteGradeAsync(Guid submissionId)
@@ -218,6 +426,12 @@ public class GradeService(
         submission.TeacherComment = null;
         submission.GradedByTeacherId = null;
         submission.GradedAtUtc = null;
+
+        if (submission.Assessment != null)
+        {
+            assessmentRepository.Delete(submission.Assessment);
+            submission.Assessment = null;
+        }
 
         await submissionRepo.SaveChangesAsync();
     }

@@ -50,6 +50,33 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Get assignment grading rules
+    /// </summary>
+    [Authorize]
+    [HttpGet("{id:guid}/grading-rules")]
+    [ProducesResponseType(typeof(AssignmentGradingRulesDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AssignmentGradingRulesDto>> GetGradingRules(Guid id)
+    {
+        var result = await service.GetGradingRulesAsync(id);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Update assignment grading rules
+    /// </summary>
+    [Authorize]
+    [HttpPut("{id:guid}/grading-rules")]
+    [HttpPatch("{id:guid}/grading-rules")]
+    [ProducesResponseType(typeof(AssignmentGradingRulesDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<AssignmentGradingRulesDto>> UpdateGradingRules(
+        Guid id,
+        [FromBody] AssignmentGradingRulesDto dto)
+    {
+        var result = await service.UpdateGradingRulesAsync(id, dto);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Изменить видимость задания для студентов
     /// </summary>
     [Authorize]

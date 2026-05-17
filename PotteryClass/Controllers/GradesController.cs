@@ -25,6 +25,47 @@ public class GradesController(IGradeService service) : ControllerBase
     }
 
     /// <summary>
+    /// Получить форму проверки решения по критериям
+    /// </summary>
+    [Authorize]
+    [HttpGet("{submissionId:guid}/assessment-form")]
+    [ProducesResponseType(typeof(SubmissionAssessmentFormDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SubmissionAssessmentFormDto>> GetAssessmentForm(Guid submissionId)
+    {
+        var result = await service.GetAssessmentFormAsync(submissionId);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Получить сохраненную проверку решения по критериям
+    /// </summary>
+    [Authorize]
+    [HttpGet("{submissionId:guid}/assessment")]
+    [ProducesResponseType(typeof(SubmissionAssessmentDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SubmissionAssessmentDto>> GetAssessment(Guid submissionId)
+    {
+        var result = await service.GetAssessmentAsync(submissionId);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Сохранить или обновить проверку решения по критериям
+    /// </summary>
+    [Authorize]
+    [HttpPut("{submissionId:guid}/assessment")]
+    [ProducesResponseType(typeof(SubmissionAssessmentDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<SubmissionAssessmentDto>> SaveAssessment(
+        Guid submissionId,
+        [FromBody] SaveSubmissionAssessmentRequest request)
+    {
+        var result = await service.SaveAssessmentAsync(submissionId, request);
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Удалить оценку у решения
     /// </summary>
     [Authorize]

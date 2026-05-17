@@ -53,6 +53,11 @@ builder.Services.AddScoped<ICourseService, CourseService>();
 
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<ICriterionGroupRepository, CriterionGroupRepository>();
+builder.Services.AddScoped<ICriterionGroupService, CriterionGroupService>();
+builder.Services.AddScoped<ICriterionRepository, CriterionRepository>();
+builder.Services.AddScoped<ICriterionService, CriterionService>();
+builder.Services.AddScoped<ISubmissionAssessmentRepository, SubmissionAssessmentRepository>();
 
 builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 builder.Services.AddScoped<IAssignmentCaptainRepository, AssignmentCaptainRepository>();
@@ -67,6 +72,7 @@ builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 
 builder.Services.AddScoped<IGradeService, GradeService>();
+builder.Services.AddScoped<IGradeCalculationService, GradeCalculationService>();
 
 builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("Minio"));
 
@@ -109,6 +115,8 @@ builder.Services.AddSwaggerGen(options =>
             "CourseStudents" => ["Студенты курса"],
             "CourseTeachers" => ["Преподаватели курса"],
             "Assignments" => ["Задания"],
+            "Criteria" => ["Критерии"],
+            "CriterionGroups" => ["Группы критериев"],
             "Comments" => ["Комментарии к заданиям"],
             "Submissions" => ["Решения"],
             "Grades" => ["Оценивание"],

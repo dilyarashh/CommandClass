@@ -20,6 +20,7 @@ public class Assignment
     public DateTime? DraftCompletedAtUtc { get; set; }
     public DateTime? TeamCompositionLockedAtUtc { get; set; }
     public DateTime? Deadline { get; set; }
+    public string? GradingRules { get; set; }
     public DateTime Created { get; set; }
     public bool IsVisible { get; set; }
     public bool RequiresSubmission { get; set; }
@@ -29,4 +30,5 @@ public class Assignment
     public ICollection<Submission> Submissions { get; set; } = new List<Submission>();
     public ICollection<AssignmentCaptain> Captains { get; set; } = new List<AssignmentCaptain>();
     public ICollection<AssignmentTeam> Teams { get; set; } = new List<AssignmentTeam>();
+    public ICollection<CriterionGroup> CriterionGroups { get; set; } = new List<CriterionGroup>();
 }
