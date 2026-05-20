@@ -60,7 +60,28 @@ public class AssignmentService(
         var isStudent = await _studentRepository.IsStudentAsync(courseId, userId);
 
         if (!isStudent)
-            throw new ForbiddenException("РќРµС‚ РґРѕСЃС‚СѓРїР°");
+            throw new ForbiddenException("Нет доступа");
+    }
+
+    private async Task EnsureGradingRulesReadableAsync(Assignment assignment)
+    {
+        var role = _currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = _currentUser.GetUserId();
+        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+
+        if (isTeacher)
+            return;
+
+        var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+
+        if (!assignment.IsVisible)
+            throw new ForbiddenException("Задание скрыто");
     }
 
     private async Task EnsureAssignmentVisibleToCurrentUser(Assignment assignment)
@@ -616,7 +637,11 @@ public class AssignmentService(
 
     public async Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId)
     {
-        var assignment = await GetAssignmentForTeacherAsync(assignmentId);
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureGradingRulesReadableAsync(assignment);
+
         return DeserializeGradingRules(assignment.GradingRules);
     }
 

@@ -12,6 +12,7 @@ namespace PotteryClass.Services;
 public class CriterionGroupService(
     ICriterionGroupRepository repository,
     ICourseTeacherRepository teacherRepository,
+    ICourseStudentRepository studentRepository,
     ICurrentUser currentUser,
     IValidator<CreateCriterionGroupRequest> createValidator,
     IValidator<UpdateCriterionGroupRequest> updateValidator)
@@ -29,6 +30,27 @@ public class CriterionGroupService(
 
         if (!isTeacher)
             throw new ForbiddenException("Нет доступа");
+    }
+
+    private async Task EnsureRubricsReadableAsync(Assignment assignment)
+    {
+        var role = currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = currentUser.GetUserId();
+        var isTeacher = await teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+
+        if (isTeacher)
+            return;
+
+        var isStudent = await studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+
+        if (!assignment.IsVisible)
+            throw new ForbiddenException("Задание скрыто");
     }
 
     private static async Task ValidateAndThrowAsync<T>(IValidator<T> validator, T dto)
@@ -94,7 +116,7 @@ public class CriterionGroupService(
         if (assignment == null)
             throw new NotFoundException("Задание не найдено");
 
-        await EnsureTeacherOrAdmin(assignment.CourseId);
+        await EnsureRubricsReadableAsync(assignment);
 
         var criterionGroups = await repository.GetByAssignmentIdAsync(assignmentId);
 

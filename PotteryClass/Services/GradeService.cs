@@ -57,6 +57,26 @@ public class GradeService(
             throw new ForbiddenException("Только преподаватель курса или администратор может выполнять это действие");
     }
 
+    private void EnsureAssessmentReadable(Data.Entities.Course course, Data.Entities.Submission submission)
+    {
+        var role = currentUser.GetRole();
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = currentUser.GetUserId();
+        var isTeacher = course.Teachers.Any(t => t.UserId == userId);
+
+        if (isTeacher)
+            return;
+
+        if (role != UserRole.Student || submission.StudentId != userId)
+            throw new ForbiddenException("Нет доступа");
+
+        var student = course.Students.FirstOrDefault(s => s.UserId == userId);
+        if (student == null || student.IsBlocked)
+            throw new ForbiddenException("Нет доступа");
+    }
+
     private void EnsureStudentOrAdmin(Data.Entities.Course course)
     {
         var studentId = currentUser.GetUserId();
@@ -324,8 +344,8 @@ public class GradeService(
 
     public async Task<SubmissionAssessmentDto> GetAssessmentAsync(Guid submissionId)
     {
-        var (_, _, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
-        EnsureTeacherOrAdmin(course);
+        var (submission, _, course) = await GetSubmissionAssignmentAndCourseAsync(submissionId);
+        EnsureAssessmentReadable(course, submission);
 
         var assessment = await assessmentRepository.GetBySubmissionIdAsync(submissionId)
                          ?? throw new NotFoundException("Проверка решения не найдена");
