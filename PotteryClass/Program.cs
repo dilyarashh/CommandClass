@@ -84,7 +84,10 @@ builder.Services.AddSingleton<IFileStorageService>(sp =>
         settings.Endpoint,
         settings.AccessKey,
         settings.SecretKey,
-        settings.Bucket);
+        settings.Bucket,
+        settings.UseSsl,
+        settings.PublicBaseUrl,
+        settings.ObjectPrefix);
 });
 
 builder.Services.AddSwaggerGen(options =>

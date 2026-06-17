@@ -58,8 +58,8 @@ public class AssignmentCaptainService(
 
     private static void EnsureTeacherCaptainSelectionMode(Assignment assignment)
     {
-        if (assignment.TeamFormationMode != AssignmentTeamFormationMode.TeacherManaged)
-            throw new BadRequestException("Ручное назначение капитанов недоступно для этого задания");
+        if (assignment.TeamFormationMode == AssignmentTeamFormationMode.StudentSelfSelection)
+            throw new BadRequestException("Ручное назначение капитанов недоступно в режиме самовыбора капитанов");
     }
 
     private static void EnsureCaptainSelectionIsOpen(Assignment assignment)
@@ -68,9 +68,30 @@ public class AssignmentCaptainService(
 
         if (assignment.CaptainSelectionEndsAtUtc.HasValue && now > assignment.CaptainSelectionEndsAtUtc.Value)
             throw new BadRequestException("Этап выбора капитанов уже завершен");
+    }
 
-        if (assignment.StartsAtUtc.HasValue && now >= assignment.StartsAtUtc.Value)
-            throw new BadRequestException("Этап выбора капитанов уже завершен");
+    private async Task EnsureCaptainLimitNotExceededAsync(Assignment assignment)
+    {
+        var activeStudentIds = await studentRepository.GetActiveStudentIdsAsync(assignment.CourseId);
+        var studentsCount = activeStudentIds.Count;
+        if (studentsCount == 0)
+            throw new BadRequestException("На курсе нет активных студентов для выбора капитанов");
+
+        var minTeamSize = Math.Max(1, assignment.MinTeamSize ?? 1);
+        var maxTeamSize = Math.Max(minTeamSize, assignment.MaxTeamSize ?? studentsCount);
+        var maxCaptainsAllowed = studentsCount / minTeamSize;
+        if (maxCaptainsAllowed < 1)
+            maxCaptainsAllowed = 1;
+
+        var captainsCount = (await assignmentCaptainRepository.GetByAssignmentAsync(assignment.Id)).Count;
+
+        if (captainsCount >= maxCaptainsAllowed)
+        {
+            throw new BadRequestException(
+                $"Слишком много капитанов для этого задания: активных студентов {studentsCount}, " +
+                $"минимальный размер команды {minTeamSize}, максимальный размер команды {maxTeamSize}, " +
+                $"капитанов уже {captainsCount}, максимум {maxCaptainsAllowed}");
+        }
     }
 
     public async Task<List<AssignmentCaptainDto>> GetByAssignmentAsync(Guid assignmentId)
@@ -122,6 +143,8 @@ public class AssignmentCaptainService(
         if (isAlreadyInTeam)
             throw new BadRequestException("Нельзя выбрать капитаном участника уже сформированной команды");
 
+        await EnsureCaptainLimitNotExceededAsync(assignment);
+
         await assignmentCaptainRepository.AddAsync(new AssignmentCaptain
         {
             AssignmentId = assignmentId,
@@ -155,6 +178,8 @@ public class AssignmentCaptainService(
         var isAlreadyInTeam = await assignmentTeamRepository.IsStudentInAssignmentTeamsAsync(assignmentId, studentId);
         if (isAlreadyInTeam)
             throw new BadRequestException("Нельзя назначить капитаном участника уже сформированной команды");
+
+        await EnsureCaptainLimitNotExceededAsync(assignment);
 
         await assignmentCaptainRepository.AddAsync(new AssignmentCaptain
         {

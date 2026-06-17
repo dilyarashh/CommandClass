@@ -202,6 +202,11 @@ public class SubmissionService(
     
     public async Task<SubmissionDto> GetMySubmissionAsync(Guid assignmentId)
     {
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureStudent(assignment.CourseId);
+
         var studentId = _currentUser.GetUserId();
 
         var submission = await _submissionRepository

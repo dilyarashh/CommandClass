@@ -60,7 +60,28 @@ public class AssignmentService(
         var isStudent = await _studentRepository.IsStudentAsync(courseId, userId);
 
         if (!isStudent)
-            throw new ForbiddenException("РќРµС‚ РґРѕСЃС‚СѓРїР°");
+            throw new ForbiddenException("Нет доступа");
+    }
+
+    private async Task EnsureGradingRulesReadableAsync(Assignment assignment)
+    {
+        var role = _currentUser.GetRole();
+
+        if (role == UserRole.Admin)
+            return;
+
+        var userId = _currentUser.GetUserId();
+        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, userId);
+
+        if (isTeacher)
+            return;
+
+        var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+
+        if (!assignment.IsVisible)
+            throw new ForbiddenException("Задание скрыто");
     }
 
     private async Task EnsureAssignmentVisibleToCurrentUser(Assignment assignment)
@@ -83,8 +104,9 @@ public class AssignmentService(
         if (!assignment.IsVisible)
             throw new ForbiddenException("Р—Р°РґР°РЅРёРµ СЃРєСЂС‹С‚Рѕ");
 
-        if (assignment.StartsAtUtc.HasValue && DateTime.UtcNow < assignment.StartsAtUtc.Value)
-            throw new ForbiddenException("Р—Р°РґР°РЅРёРµ РїРѕРєР° РЅРµРґРѕСЃС‚СѓРїРЅРѕ");
+        var availableAtUtc = assignment.TeamFormationEndsAtUtc ?? assignment.StartsAtUtc;
+        if (availableAtUtc.HasValue && DateTime.UtcNow < availableAtUtc.Value)
+            throw new ForbiddenException("Задание пока недоступно");
     }
 
     private static async Task ValidateAndThrowAsync<T>(IValidator<T> validator, T dto)
@@ -154,7 +176,7 @@ public class AssignmentService(
         DateTime? startsAtUtc,
         DateTime? captainSelectionEndsAtUtc)
     {
-        return startsAtUtc ?? captainSelectionEndsAtUtc;
+        return captainSelectionEndsAtUtc ?? startsAtUtc;
     }
 
     private static void ValidateTeamFormationSchedule(
@@ -183,12 +205,12 @@ public class AssignmentService(
         if (assignment.TeamCompositionLockedAtUtc.HasValue)
             return true;
 
-        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+        return assignment.TeamFormationEndsAtUtc.HasValue && DateTime.UtcNow >= assignment.TeamFormationEndsAtUtc.Value;
     }
 
     private static bool IsClosed(Assignment assignment)
     {
-        return assignment.StartsAtUtc.HasValue && DateTime.UtcNow >= assignment.StartsAtUtc.Value;
+        return assignment.TeamFormationEndsAtUtc.HasValue && DateTime.UtcNow >= assignment.TeamFormationEndsAtUtc.Value;
     }
 
     private static string ResolveStatus(Assignment assignment)
@@ -198,7 +220,8 @@ public class AssignmentService(
         if (assignment.Deadline.HasValue && now > assignment.Deadline.Value)
             return AssignmentStatus.Finished;
 
-        if (assignment.StartsAtUtc.HasValue && now < assignment.StartsAtUtc.Value)
+        var availableAtUtc = assignment.TeamFormationEndsAtUtc ?? assignment.StartsAtUtc;
+        if (availableAtUtc.HasValue && now < availableAtUtc.Value)
             return AssignmentStatus.Hidden;
 
         return AssignmentStatus.Available;
@@ -614,7 +637,11 @@ public class AssignmentService(
 
     public async Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId)
     {
-        var assignment = await GetAssignmentForTeacherAsync(assignmentId);
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureGradingRulesReadableAsync(assignment);
+
         return DeserializeGradingRules(assignment.GradingRules);
     }
 

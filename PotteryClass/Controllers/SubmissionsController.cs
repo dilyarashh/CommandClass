@@ -65,6 +65,7 @@ public class SubmissionsController(ISubmissionService service) : ControllerBase
     /// Получить мое решение по заданию
     /// </summary>
     [Authorize]
+    [HttpGet("/api/assignments/{assignmentId}/my-submission")]
     [HttpGet("/assignments/{assignmentId}/my-submission")]
     public async Task<ActionResult<SubmissionDto>> GetMySubmission(Guid assignmentId)
     {
