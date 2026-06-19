@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AssignmentCaptain> AssignmentCaptains { get; set; }
     public DbSet<AssignmentTeam> AssignmentTeams { get; set; }
     public DbSet<AssignmentTeamMember> AssignmentTeamMembers { get; set; }
+    public DbSet<PeerReviewAssignment> PeerReviewAssignments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -304,6 +305,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<PeerReviewAssignment>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+
+            b.HasIndex(x => x.AssignmentId);
+            b.HasIndex(x => x.ReviewerTeamId);
+            b.HasIndex(x => x.ReviewedTeamId);
+            b.HasIndex(x => new { x.AssignmentId, x.ReviewerTeamId, x.ReviewedTeamId }).IsUnique();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.PeerReviewAssignments)
+                .HasForeignKey(x => x.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.ReviewerTeam)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewerTeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.ReviewedTeam)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewedTeamId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -14,6 +14,8 @@ public class AssignmentService(
     IAssignmentRepository assignmentRepository,
     ICourseTeacherRepository teacherRepository,
     ICourseStudentRepository studentRepository,
+    IAssignmentTeamRepository assignmentTeamRepository,
+    IPeerReviewAssignmentRepository peerReviewAssignmentRepository,
     ICurrentUser currentUser,
     IFileStorageService fileStorage,
     IValidator<AssignmentGradingRulesDto> gradingRulesValidator)
@@ -25,6 +27,8 @@ public class AssignmentService(
     private readonly IAssignmentRepository _assignmentRepository = assignmentRepository;
     private readonly ICourseTeacherRepository _teacherRepository = teacherRepository;
     private readonly ICourseStudentRepository _studentRepository = studentRepository;
+    private readonly IAssignmentTeamRepository _assignmentTeamRepository = assignmentTeamRepository;
+    private readonly IPeerReviewAssignmentRepository _peerReviewAssignmentRepository = peerReviewAssignmentRepository;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly IFileStorageService _fileStorage = fileStorage;
     private readonly IValidator<AssignmentGradingRulesDto> _gradingRulesValidator = gradingRulesValidator;
@@ -234,6 +238,65 @@ public class AssignmentService(
 
         if (teamCount > 0 && requiredReviewsCount.Value > teamCount - 1)
             throw new BadRequestException("Количество обязательных peer-review проверок не может быть больше количества других команд");
+    }
+
+    private static PeerReviewAssignmentDto MapPeerReviewAssignment(PeerReviewAssignment assignment)
+    {
+        return new PeerReviewAssignmentDto
+        {
+            Id = assignment.Id,
+            AssignmentId = assignment.AssignmentId,
+            ReviewerTeamId = assignment.ReviewerTeamId,
+            ReviewerTeamName = assignment.ReviewerTeam.Name,
+            ReviewedTeamId = assignment.ReviewedTeamId,
+            ReviewedTeamName = assignment.ReviewedTeam.Name,
+            CreatedAtUtc = assignment.CreatedAtUtc
+        };
+    }
+
+    private static PeerReviewAssignmentResultDto MapPeerReviewAssignmentResult(
+        Guid assignmentId,
+        int teamsCount,
+        int requiredReviewsCount,
+        List<PeerReviewAssignment> assignments)
+    {
+        return new PeerReviewAssignmentResultDto
+        {
+            AssignmentId = assignmentId,
+            TeamsCount = teamsCount,
+            RequiredReviewsCount = requiredReviewsCount,
+            Assignments = assignments.Select(MapPeerReviewAssignment).ToList()
+        };
+    }
+
+    private static List<PeerReviewAssignment> BuildPeerReviewAssignments(
+        Guid assignmentId,
+        IReadOnlyList<AssignmentTeam> teams,
+        int requiredReviewsCount)
+    {
+        var result = new List<PeerReviewAssignment>();
+        var now = DateTime.UtcNow;
+
+        for (var reviewerIndex = 0; reviewerIndex < teams.Count; reviewerIndex++)
+        {
+            var reviewerTeam = teams[reviewerIndex];
+
+            for (var offset = 1; offset <= requiredReviewsCount; offset++)
+            {
+                var reviewedTeam = teams[(reviewerIndex + offset) % teams.Count];
+
+                result.Add(new PeerReviewAssignment
+                {
+                    Id = Guid.NewGuid(),
+                    AssignmentId = assignmentId,
+                    ReviewerTeamId = reviewerTeam.Id,
+                    ReviewedTeamId = reviewedTeam.Id,
+                    CreatedAtUtc = now
+                });
+            }
+        }
+
+        return result;
     }
 
     private static bool IsTeamCompositionLocked(Assignment assignment)
@@ -746,6 +809,57 @@ public class AssignmentService(
         await _assignmentRepository.UpdateAsync(assignment);
 
         return Map(assignment);
+    }
+
+    public async Task<PeerReviewAssignmentResultDto> GetPeerReviewAssignmentsAsync(Guid assignmentId)
+    {
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        if (!assignment.PeerReviewEnabled)
+            throw new BadRequestException("Peer-review не включен для задания");
+
+        var teamsCount = await _assignmentRepository.CountTeamsAsync(assignmentId);
+        var assignments = await _peerReviewAssignmentRepository.GetByAssignmentAsync(assignmentId);
+
+        return MapPeerReviewAssignmentResult(
+            assignmentId,
+            teamsCount,
+            assignment.PeerReviewRequiredReviewsCount ?? 0,
+            assignments);
+    }
+
+    public async Task<PeerReviewAssignmentResultDto> GeneratePeerReviewAssignmentsAsync(Guid assignmentId)
+    {
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        if (!assignment.PeerReviewEnabled)
+            throw new BadRequestException("Peer-review не включен для задания");
+
+        if (!assignment.PeerReviewRequiredReviewsCount.HasValue)
+            throw new BadRequestException("Количество обязательных peer-review проверок не задано");
+
+        var teams = await _assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        if (teams.Count < 2)
+            throw new BadRequestException("Для peer-review нужно минимум две команды");
+
+        var requiredReviewsCount = assignment.PeerReviewRequiredReviewsCount.Value;
+        if (requiredReviewsCount < 1)
+            throw new BadRequestException("Количество обязательных peer-review проверок должно быть больше 0");
+
+        if (requiredReviewsCount > teams.Count - 1)
+            throw new BadRequestException("Количество обязательных peer-review проверок не может быть больше количества других команд");
+
+        var assignments = BuildPeerReviewAssignments(assignmentId, teams, requiredReviewsCount);
+        await _peerReviewAssignmentRepository.ReplaceForAssignmentAsync(assignmentId, assignments);
+
+        assignments = await _peerReviewAssignmentRepository.GetByAssignmentAsync(assignmentId);
+        return MapPeerReviewAssignmentResult(assignmentId, teams.Count, requiredReviewsCount, assignments);
     }
 
     public async Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId)
