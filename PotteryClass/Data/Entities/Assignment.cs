@@ -36,4 +36,5 @@ public class Assignment
     public ICollection<AssignmentCaptain> Captains { get; set; } = new List<AssignmentCaptain>();
     public ICollection<AssignmentTeam> Teams { get; set; } = new List<AssignmentTeam>();
     public ICollection<CriterionGroup> CriterionGroups { get; set; } = new List<CriterionGroup>();
+    public ICollection<PeerReviewAssignment> PeerReviewAssignments { get; set; } = new List<PeerReviewAssignment>();
 }

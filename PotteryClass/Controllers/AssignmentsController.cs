@@ -104,6 +104,30 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Получить назначения peer-review задания
+    /// </summary>
+    [Authorize]
+    [HttpGet("{id}/peer-review/assignments")]
+    [ProducesResponseType(typeof(PeerReviewAssignmentResultDto), 200)]
+    public async Task<ActionResult<PeerReviewAssignmentResultDto>> GetPeerReviewAssignments(Guid id)
+    {
+        var result = await service.GetPeerReviewAssignmentsAsync(id);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Сформировать назначения peer-review задания
+    /// </summary>
+    [Authorize]
+    [HttpPost("{id}/peer-review/assignments/generate")]
+    [ProducesResponseType(typeof(PeerReviewAssignmentResultDto), 200)]
+    public async Task<ActionResult<PeerReviewAssignmentResultDto>> GeneratePeerReviewAssignments(Guid id)
+    {
+        var result = await service.GeneratePeerReviewAssignmentsAsync(id);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Удалить задание
     /// </summary>
     [Authorize]

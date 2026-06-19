@@ -62,6 +62,7 @@ builder.Services.AddScoped<ISubmissionAssessmentRepository, SubmissionAssessment
 builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 builder.Services.AddScoped<IAssignmentCaptainRepository, AssignmentCaptainRepository>();
 builder.Services.AddScoped<IAssignmentTeamRepository, AssignmentTeamRepository>();
+builder.Services.AddScoped<IPeerReviewAssignmentRepository, PeerReviewAssignmentRepository>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<IAssignmentCaptainService, AssignmentCaptainService>();
 builder.Services.AddScoped<IAssignmentTeamService, AssignmentTeamService>();
