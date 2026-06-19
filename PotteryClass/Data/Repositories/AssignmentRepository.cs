@@ -35,6 +35,11 @@ public class AssignmentRepository(AppDbContext db) : IAssignmentRepository
         db.AssignmentFiles.Add(file);
         await db.SaveChangesAsync();
     }
+
+    public async Task<int> CountTeamsAsync(Guid assignmentId)
+    {
+        return await db.AssignmentTeams.CountAsync(x => x.AssignmentId == assignmentId);
+    }
     
     public async Task<(List<Assignment>, int)> GetByCourseAsync(
         Guid courseId,

@@ -44,6 +44,16 @@ public class AssignmentDto
 
     public DateTime? Deadline { get; set; }
 
+    public bool PeerReviewEnabled { get; set; }
+
+    public DateTime? PeerReviewStartsAtUtc { get; set; }
+
+    public DateTime? PeerReviewEndsAtUtc { get; set; }
+
+    public int? PeerReviewRequiredReviewsCount { get; set; }
+
+    public decimal PeerReviewPenaltyPercent { get; set; }
+
     public DateTime Created { get; set; }
     
     public List<AssignmentFileDto> Files { get; set; } = new();

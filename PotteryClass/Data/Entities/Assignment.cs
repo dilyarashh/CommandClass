@@ -24,6 +24,11 @@ public class Assignment
     public DateTime Created { get; set; }
     public bool IsVisible { get; set; }
     public bool RequiresSubmission { get; set; }
+    public bool PeerReviewEnabled { get; set; }
+    public DateTime? PeerReviewStartsAtUtc { get; set; }
+    public DateTime? PeerReviewEndsAtUtc { get; set; }
+    public int? PeerReviewRequiredReviewsCount { get; set; }
+    public decimal PeerReviewPenaltyPercent { get; set; } = 20m;
     
     public ICollection<AssignmentFile> Files { get; set; } = new List<AssignmentFile>();
     public ICollection<Comment> Comments { get; set; } = new List<Comment>();

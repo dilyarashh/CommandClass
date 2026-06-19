@@ -20,6 +20,7 @@ public class AssignmentService(
     : IAssignmentService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const decimal DefaultPeerReviewPenaltyPercent = 20m;
 
     private readonly IAssignmentRepository _assignmentRepository = assignmentRepository;
     private readonly ICourseTeacherRepository _teacherRepository = teacherRepository;
@@ -200,6 +201,41 @@ public class AssignmentService(
             throw new BadRequestException("Р¤РѕСЂРјРёСЂРѕРІР°РЅРёРµ РєРѕРјР°РЅРґ РґРѕР»Р¶РЅРѕ Р·Р°РІРµСЂС€Р°С‚СЊСЃСЏ РЅРµ РїРѕР·Р¶Рµ РґРµРґР»Р°Р№РЅР° Р·Р°РґР°РЅРёСЏ");
     }
 
+    private static void ValidatePeerReviewSettings(
+        bool enabled,
+        DateTime? startsAtUtc,
+        DateTime? endsAtUtc,
+        int? requiredReviewsCount,
+        decimal penaltyPercent,
+        int teamCount)
+    {
+        if (!enabled)
+        {
+            if (penaltyPercent < 0 || penaltyPercent > 100)
+                throw new BadRequestException("Процент штрафа peer-review должен быть от 0 до 100");
+
+            return;
+        }
+
+        if (!startsAtUtc.HasValue)
+            throw new BadRequestException("Дата начала peer-review обязательна");
+
+        if (!endsAtUtc.HasValue)
+            throw new BadRequestException("Дата окончания peer-review обязательна");
+
+        if (startsAtUtc.Value >= endsAtUtc.Value)
+            throw new BadRequestException("Дата начала peer-review должна быть раньше даты окончания");
+
+        if (!requiredReviewsCount.HasValue || requiredReviewsCount.Value < 1)
+            throw new BadRequestException("Количество обязательных peer-review проверок должно быть больше 0");
+
+        if (penaltyPercent < 0 || penaltyPercent > 100)
+            throw new BadRequestException("Процент штрафа peer-review должен быть от 0 до 100");
+
+        if (teamCount > 0 && requiredReviewsCount.Value > teamCount - 1)
+            throw new BadRequestException("Количество обязательных peer-review проверок не может быть больше количества других команд");
+    }
+
     private static bool IsTeamCompositionLocked(Assignment assignment)
     {
         if (assignment.TeamCompositionLockedAtUtc.HasValue)
@@ -331,6 +367,14 @@ public class AssignmentService(
         ValidateAssignmentSchedule(dto.StartsAtUtc, dto.Deadline);
         ValidateTeamSize(dto.MinTeamSize, dto.MaxTeamSize);
         ValidateTeamFormationSchedule(dto.StartsAtUtc, dto.CaptainSelectionEndsAtUtc, dto.TeamFormationEndsAtUtc, dto.Deadline);
+        var peerReviewPenaltyPercent = dto.PeerReviewPenaltyPercent ?? DefaultPeerReviewPenaltyPercent;
+        ValidatePeerReviewSettings(
+            dto.PeerReviewEnabled,
+            dto.PeerReviewStartsAtUtc,
+            dto.PeerReviewEndsAtUtc,
+            dto.PeerReviewRequiredReviewsCount,
+            peerReviewPenaltyPercent,
+            teamCount: 0);
 
         var assignment = new Assignment
         {
@@ -348,6 +392,11 @@ public class AssignmentService(
             RequiresSubmission = dto.RequiresSubmission,
             IsVisible = dto.IsVisible,
             Deadline = dto.Deadline,
+            PeerReviewEnabled = dto.PeerReviewEnabled,
+            PeerReviewStartsAtUtc = dto.PeerReviewStartsAtUtc,
+            PeerReviewEndsAtUtc = dto.PeerReviewEndsAtUtc,
+            PeerReviewRequiredReviewsCount = dto.PeerReviewRequiredReviewsCount,
+            PeerReviewPenaltyPercent = peerReviewPenaltyPercent,
             GradingRules = JsonSerializer.Serialize(CreateDefaultGradingRules(), JsonOptions),
             Created = DateTime.UtcNow
         };
@@ -383,10 +432,22 @@ public class AssignmentService(
         var nextTeamFormationMode = dto.TeamFormationMode is null
             ? assignment.TeamFormationMode
             : ParseTeamFormationMode(dto.TeamFormationMode);
+        var nextPeerReviewEnabled = dto.PeerReviewEnabled ?? assignment.PeerReviewEnabled;
+        var nextPeerReviewStartsAtUtc = dto.PeerReviewStartsAtUtc ?? assignment.PeerReviewStartsAtUtc;
+        var nextPeerReviewEndsAtUtc = dto.PeerReviewEndsAtUtc ?? assignment.PeerReviewEndsAtUtc;
+        var nextPeerReviewRequiredReviewsCount = dto.PeerReviewRequiredReviewsCount ?? assignment.PeerReviewRequiredReviewsCount;
+        var nextPeerReviewPenaltyPercent = dto.PeerReviewPenaltyPercent ?? assignment.PeerReviewPenaltyPercent;
 
         ValidateAssignmentSchedule(nextStartsAtUtc, nextDeadline);
         ValidateTeamSize(nextMinTeamSize, nextMaxTeamSize);
         ValidateTeamFormationSchedule(nextStartsAtUtc, nextCaptainSelectionEndsAtUtc, nextTeamFormationEndsAtUtc, nextDeadline);
+        ValidatePeerReviewSettings(
+            nextPeerReviewEnabled,
+            nextPeerReviewStartsAtUtc,
+            nextPeerReviewEndsAtUtc,
+            nextPeerReviewRequiredReviewsCount,
+            nextPeerReviewPenaltyPercent,
+            await _assignmentRepository.CountTeamsAsync(id));
 
         if (dto.Title is not null)
             assignment.Title = dto.Title.Trim();
@@ -420,6 +481,21 @@ public class AssignmentService(
 
         if (dto.Deadline.HasValue)
             assignment.Deadline = dto.Deadline;
+
+        if (dto.PeerReviewEnabled.HasValue)
+            assignment.PeerReviewEnabled = dto.PeerReviewEnabled.Value;
+
+        if (dto.PeerReviewStartsAtUtc.HasValue)
+            assignment.PeerReviewStartsAtUtc = dto.PeerReviewStartsAtUtc;
+
+        if (dto.PeerReviewEndsAtUtc.HasValue)
+            assignment.PeerReviewEndsAtUtc = dto.PeerReviewEndsAtUtc;
+
+        if (dto.PeerReviewRequiredReviewsCount.HasValue)
+            assignment.PeerReviewRequiredReviewsCount = dto.PeerReviewRequiredReviewsCount;
+
+        if (dto.PeerReviewPenaltyPercent.HasValue)
+            assignment.PeerReviewPenaltyPercent = dto.PeerReviewPenaltyPercent.Value;
 
         await _assignmentRepository.UpdateAsync(assignment);
 
@@ -461,6 +537,11 @@ public class AssignmentService(
             IsClosed = IsClosed(assignment),
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
+            PeerReviewEnabled = assignment.PeerReviewEnabled,
+            PeerReviewStartsAtUtc = assignment.PeerReviewStartsAtUtc,
+            PeerReviewEndsAtUtc = assignment.PeerReviewEndsAtUtc,
+            PeerReviewRequiredReviewsCount = assignment.PeerReviewRequiredReviewsCount,
+            PeerReviewPenaltyPercent = assignment.PeerReviewPenaltyPercent,
             Created = assignment.Created
         };
     }
@@ -612,6 +693,11 @@ public class AssignmentService(
             IsClosed = IsClosed(assignment),
             RequiresSubmission = assignment.RequiresSubmission,
             Deadline = assignment.Deadline,
+            PeerReviewEnabled = assignment.PeerReviewEnabled,
+            PeerReviewStartsAtUtc = assignment.PeerReviewStartsAtUtc,
+            PeerReviewEndsAtUtc = assignment.PeerReviewEndsAtUtc,
+            PeerReviewRequiredReviewsCount = assignment.PeerReviewRequiredReviewsCount,
+            PeerReviewPenaltyPercent = assignment.PeerReviewPenaltyPercent,
             Created = assignment.Created,
             Files = assignment.Files.Select(f => new AssignmentFileDto
             {
@@ -633,6 +719,33 @@ public class AssignmentService(
 
         assignment.IsVisible = isVisible;
         await _assignmentRepository.UpdateAsync(assignment);
+    }
+
+    public async Task<AssignmentDto> UpdatePeerReviewAsync(Guid id, UpdateAssignmentPeerReviewRequest dto)
+    {
+        var assignment = await _assignmentRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        await EnsureTeacherOrAdmin(assignment.CourseId);
+
+        var penaltyPercent = dto.PeerReviewPenaltyPercent ?? assignment.PeerReviewPenaltyPercent;
+        ValidatePeerReviewSettings(
+            dto.PeerReviewEnabled,
+            dto.PeerReviewStartsAtUtc,
+            dto.PeerReviewEndsAtUtc,
+            dto.PeerReviewRequiredReviewsCount,
+            penaltyPercent,
+            await _assignmentRepository.CountTeamsAsync(id));
+
+        assignment.PeerReviewEnabled = dto.PeerReviewEnabled;
+        assignment.PeerReviewStartsAtUtc = dto.PeerReviewStartsAtUtc;
+        assignment.PeerReviewEndsAtUtc = dto.PeerReviewEndsAtUtc;
+        assignment.PeerReviewRequiredReviewsCount = dto.PeerReviewRequiredReviewsCount;
+        assignment.PeerReviewPenaltyPercent = penaltyPercent;
+
+        await _assignmentRepository.UpdateAsync(assignment);
+
+        return Map(assignment);
     }
 
     public async Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId)
