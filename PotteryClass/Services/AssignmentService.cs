@@ -16,6 +16,7 @@ public class AssignmentService(
     ICourseStudentRepository studentRepository,
     IAssignmentTeamRepository assignmentTeamRepository,
     IPeerReviewAssignmentRepository peerReviewAssignmentRepository,
+    IPeerReviewRatingRepository peerReviewRatingRepository,
     ISubmissionRepository submissionRepository,
     ICurrentUser currentUser,
     IFileStorageService fileStorage,
@@ -30,6 +31,7 @@ public class AssignmentService(
     private readonly ICourseStudentRepository _studentRepository = studentRepository;
     private readonly IAssignmentTeamRepository _assignmentTeamRepository = assignmentTeamRepository;
     private readonly IPeerReviewAssignmentRepository _peerReviewAssignmentRepository = peerReviewAssignmentRepository;
+    private readonly IPeerReviewRatingRepository _peerReviewRatingRepository = peerReviewRatingRepository;
     private readonly ISubmissionRepository _submissionRepository = submissionRepository;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly IFileStorageService _fileStorage = fileStorage;
@@ -301,10 +303,15 @@ public class AssignmentService(
         return result;
     }
 
-    private static PeerReviewSubmissionDto? MapPeerReviewSubmission(Submission? submission)
+    private static PeerReviewSubmissionDto? MapPeerReviewSubmission(
+        Submission? submission,
+        IReadOnlyDictionary<Guid, PeerReviewRating>? ratingsBySubmissionId = null)
     {
         if (submission is null)
             return null;
+
+        PeerReviewRating? rating = null;
+        ratingsBySubmissionId?.TryGetValue(submission.Id, out rating);
 
         return new PeerReviewSubmissionDto
         {
@@ -314,6 +321,9 @@ public class AssignmentService(
             LastName = submission.Student?.LastName,
             MiddleName = submission.Student?.MiddleName,
             Created = submission.Created,
+            IsRated = rating is not null,
+            Score = rating?.Score,
+            Comment = rating?.Comment,
             Files = submission.Files.Select(f => new SubmissionFileDto
             {
                 Id = f.Id,
@@ -340,7 +350,8 @@ public class AssignmentService(
 
     private static PeerReviewTeamMemberSubmissionsDto MapPeerReviewTeamMemberSubmissions(
         AssignmentTeamMember member,
-        IReadOnlyDictionary<Guid, List<Submission>> submissionsByStudentId)
+        IReadOnlyDictionary<Guid, List<Submission>> submissionsByStudentId,
+        IReadOnlyDictionary<Guid, PeerReviewRating> ratingsBySubmissionId)
     {
         submissionsByStudentId.TryGetValue(member.UserId, out var submissions);
 
@@ -352,11 +363,60 @@ public class AssignmentService(
             MiddleName = member.User.MiddleName,
             Submissions = (submissions ?? [])
                 .OrderByDescending(x => x.Created)
-                .Select(MapPeerReviewSubmission)
+                .Select(x => MapPeerReviewSubmission(x, ratingsBySubmissionId))
                 .Where(x => x is not null)
                 .Select(x => x!)
                 .ToList()
         };
+    }
+
+    private static PeerReviewRatingDto MapPeerReviewRating(PeerReviewRating rating)
+    {
+        return new PeerReviewRatingDto
+        {
+            Id = rating.Id,
+            PeerReviewAssignmentId = rating.PeerReviewAssignmentId,
+            SubmissionId = rating.SubmissionId,
+            ReviewerUserId = rating.ReviewerUserId,
+            ReviewedUserId = rating.ReviewedUserId,
+            Score = rating.Score,
+            Comment = rating.Comment,
+            CreatedAtUtc = rating.CreatedAtUtc,
+            UpdatedAtUtc = rating.UpdatedAtUtc
+        };
+    }
+
+    private static void EnsurePeerReviewRatingWindow(Assignment assignment)
+    {
+        var now = DateTime.UtcNow;
+
+        if (assignment.PeerReviewStartsAtUtc.HasValue && now < assignment.PeerReviewStartsAtUtc.Value)
+            throw new BadRequestException("Peer-review еще не начался");
+
+        if (assignment.PeerReviewEndsAtUtc.HasValue && now > assignment.PeerReviewEndsAtUtc.Value)
+            throw new BadRequestException("Дедлайн peer-review уже прошел");
+    }
+
+    private static void ValidatePeerReviewRatingRequest(UpdatePeerReviewRatingsRequest dto)
+    {
+        if (dto.Ratings.Count == 0)
+            throw new BadRequestException("Не переданы оценки peer-review");
+
+        var duplicates = dto.Ratings
+            .GroupBy(x => x.SubmissionId)
+            .Any(x => x.Count() > 1);
+
+        if (duplicates)
+            throw new BadRequestException("Оценка одного решения передана несколько раз");
+
+        foreach (var rating in dto.Ratings)
+        {
+            if (rating.Score < 0 || rating.Score > 100)
+                throw new BadRequestException("Оценка peer-review должна быть от 0 до 100");
+
+            if (rating.Comment is { Length: > 4000 })
+                throw new BadRequestException("Комментарий peer-review не может быть длиннее 4000 символов");
+        }
     }
 
     private static bool IsTeamCompositionLocked(Assignment assignment)
@@ -963,23 +1023,41 @@ public class AssignmentService(
             .GroupBy(x => x.StudentId)
             .ToDictionary(x => x.Key, x => x.ToList());
 
-        var items = peerReviewAssignments.Select(x => new PeerReviewFormItemDto
+        var peerReviewAssignmentIds = peerReviewAssignments.Select(x => x.Id).ToList();
+        var ratings = peerReviewAssignmentIds.Count == 0
+            ? []
+            : await _peerReviewRatingRepository.GetByReviewerAndAssignmentsAsync(
+                assignmentId,
+                userId,
+                peerReviewAssignmentIds);
+
+        var ratingsBySubmissionId = ratings.ToDictionary(x => x.SubmissionId);
+
+        var items = peerReviewAssignments.Select(x =>
         {
-            PeerReviewAssignmentId = x.Id,
-            ReviewedTeamId = x.ReviewedTeamId,
-            ReviewedTeamName = x.ReviewedTeam.Name,
-            Members = x.ReviewedTeam.Members
-                .OrderBy(m => m.User.LastName)
-                .ThenBy(m => m.User.FirstName)
-                .Select(MapTeamMember)
-                .ToList(),
-            MemberSubmissions = x.ReviewedTeam.Members
-                .OrderBy(m => m.User.LastName)
-                .ThenBy(m => m.User.FirstName)
-                .Select(m => MapPeerReviewTeamMemberSubmissions(m, submissionsByStudentId))
-                .ToList(),
-            FinalSubmission = MapPeerReviewSubmission(x.ReviewedTeam.FinalSubmission),
-            IsCompleted = false
+            var reviewedSubmissionsForTeam = x.ReviewedTeam.Members
+                .SelectMany(m => submissionsByStudentId.TryGetValue(m.UserId, out var submissions) ? submissions : [])
+                .ToList();
+
+            return new PeerReviewFormItemDto
+            {
+                PeerReviewAssignmentId = x.Id,
+                ReviewedTeamId = x.ReviewedTeamId,
+                ReviewedTeamName = x.ReviewedTeam.Name,
+                Members = x.ReviewedTeam.Members
+                    .OrderBy(m => m.User.LastName)
+                    .ThenBy(m => m.User.FirstName)
+                    .Select(MapTeamMember)
+                    .ToList(),
+                MemberSubmissions = x.ReviewedTeam.Members
+                    .OrderBy(m => m.User.LastName)
+                    .ThenBy(m => m.User.FirstName)
+                    .Select(m => MapPeerReviewTeamMemberSubmissions(m, submissionsByStudentId, ratingsBySubmissionId))
+                    .ToList(),
+                FinalSubmission = MapPeerReviewSubmission(x.ReviewedTeam.FinalSubmission),
+                IsCompleted = reviewedSubmissionsForTeam.Count > 0 &&
+                              reviewedSubmissionsForTeam.All(s => ratingsBySubmissionId.ContainsKey(s.Id))
+            };
         }).ToList();
 
         var completedCount = items.Count(x => x.IsCompleted);
@@ -996,6 +1074,96 @@ public class AssignmentService(
             RemainingCount = items.Count - completedCount,
             Items = items
         };
+    }
+
+    public async Task<List<PeerReviewRatingDto>> UpdatePeerReviewRatingsAsync(
+        Guid assignmentId,
+        UpdatePeerReviewRatingsRequest dto)
+    {
+        ValidatePeerReviewRatingRequest(dto);
+
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new NotFoundException("Задание не найдено");
+
+        if (!assignment.PeerReviewEnabled)
+            throw new BadRequestException("Peer-review не включен для задания");
+
+        EnsurePeerReviewRatingWindow(assignment);
+
+        if (_currentUser.GetRole() != UserRole.Student)
+            throw new ForbiddenException("Оценки peer-review может сохранять только студент");
+
+        var userId = _currentUser.GetUserId();
+        var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ForbiddenException("Нет доступа");
+
+        var reviewerTeam = await _assignmentTeamRepository.GetStudentTeamAsync(assignmentId, userId)
+            ?? throw new BadRequestException("Студент не состоит в команде задания");
+
+        var peerReviewAssignments = await _peerReviewAssignmentRepository.GetByReviewerTeamAsync(
+            assignmentId,
+            reviewerTeam.Id);
+
+        var peerReviewAssignmentsById = peerReviewAssignments.ToDictionary(x => x.Id);
+        var requestedAssignmentIds = dto.Ratings.Select(x => x.PeerReviewAssignmentId).Distinct().ToList();
+        if (requestedAssignmentIds.Any(x => !peerReviewAssignmentsById.ContainsKey(x)))
+            throw new BadRequestException("Можно оценивать только назначенные команды");
+
+        var reviewedMemberIds = peerReviewAssignments
+            .Where(x => requestedAssignmentIds.Contains(x.Id))
+            .SelectMany(x => x.ReviewedTeam.Members)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToList();
+
+        var submissions = await _submissionRepository.GetByAssignmentAndStudentsAsync(assignmentId, reviewedMemberIds);
+        var submissionsById = submissions.ToDictionary(x => x.Id);
+        var now = DateTime.UtcNow;
+
+        var ratings = new List<PeerReviewRating>();
+        foreach (var ratingDto in dto.Ratings)
+        {
+            var peerReviewAssignment = peerReviewAssignmentsById[ratingDto.PeerReviewAssignmentId];
+
+            if (!submissionsById.TryGetValue(ratingDto.SubmissionId, out var submission))
+                throw new BadRequestException("Решение не относится к назначенной команде");
+
+            var reviewedMemberIdsForAssignment = peerReviewAssignment.ReviewedTeam.Members
+                .Select(x => x.UserId)
+                .ToHashSet();
+
+            if (!reviewedMemberIdsForAssignment.Contains(submission.StudentId))
+                throw new BadRequestException("Решение не относится к назначенной команде");
+
+            ratings.Add(new PeerReviewRating
+            {
+                Id = Guid.NewGuid(),
+                AssignmentId = assignmentId,
+                PeerReviewAssignmentId = peerReviewAssignment.Id,
+                ReviewerTeamId = reviewerTeam.Id,
+                ReviewedTeamId = peerReviewAssignment.ReviewedTeamId,
+                ReviewerUserId = userId,
+                ReviewedUserId = submission.StudentId,
+                SubmissionId = submission.Id,
+                Score = ratingDto.Score,
+                Comment = string.IsNullOrWhiteSpace(ratingDto.Comment) ? null : ratingDto.Comment.Trim(),
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now
+            });
+        }
+
+        await _peerReviewRatingRepository.UpsertAsync(ratings);
+
+        var updated = await _peerReviewRatingRepository.GetByReviewerAndAssignmentsAsync(
+            assignmentId,
+            userId,
+            requestedAssignmentIds);
+
+        return updated
+            .Where(x => dto.Ratings.Any(r => r.SubmissionId == x.SubmissionId))
+            .Select(MapPeerReviewRating)
+            .ToList();
     }
 
     public async Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId)

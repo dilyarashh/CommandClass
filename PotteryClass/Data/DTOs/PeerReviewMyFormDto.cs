@@ -35,6 +35,9 @@ public class PeerReviewSubmissionDto
     public string? LastName { get; set; }
     public string? MiddleName { get; set; }
     public DateTime Created { get; set; }
+    public bool IsRated { get; set; }
+    public decimal? Score { get; set; }
+    public string? Comment { get; set; }
     public List<SubmissionFileDto> Files { get; set; } = new();
 }
 
