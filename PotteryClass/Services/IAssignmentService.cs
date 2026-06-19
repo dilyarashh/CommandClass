@@ -22,6 +22,7 @@ public interface IAssignmentService
     Task<AssignmentDto> UpdatePeerReviewAsync(Guid id, UpdateAssignmentPeerReviewRequest dto);
     Task<PeerReviewAssignmentResultDto> GetPeerReviewAssignmentsAsync(Guid assignmentId);
     Task<PeerReviewAssignmentResultDto> GeneratePeerReviewAssignmentsAsync(Guid assignmentId);
+    Task<PeerReviewMyFormDto> GetMyPeerReviewFormAsync(Guid assignmentId);
     Task<AssignmentGradingRulesDto> GetGradingRulesAsync(Guid assignmentId);
     Task<AssignmentGradingRulesDto> UpdateGradingRulesAsync(Guid assignmentId, AssignmentGradingRulesDto dto);
 }
