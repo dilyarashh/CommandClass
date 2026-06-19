@@ -61,6 +61,22 @@ namespace PotteryClass.Migrations
                     b.Property<int?>("MinTeamSize")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("PeerReviewEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PeerReviewEndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("PeerReviewPenaltyPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int?>("PeerReviewRequiredReviewsCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PeerReviewStartsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("StartsAtUtc")
                         .HasColumnType("timestamp with time zone");
 

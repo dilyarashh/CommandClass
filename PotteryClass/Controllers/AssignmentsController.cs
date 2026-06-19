@@ -90,6 +90,20 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Изменить настройки peer-review задания
+    /// </summary>
+    [Authorize]
+    [HttpPatch("{id}/peer-review")]
+    [ProducesResponseType(typeof(AssignmentDto), 200)]
+    public async Task<ActionResult<AssignmentDto>> UpdatePeerReview(
+        Guid id,
+        [FromBody] UpdateAssignmentPeerReviewRequest dto)
+    {
+        var assignment = await service.UpdatePeerReviewAsync(id, dto);
+        return Ok(assignment);
+    }
+
+    /// <summary>
     /// Удалить задание
     /// </summary>
     [Authorize]

@@ -9,6 +9,7 @@ public interface IAssignmentRepository
     Task UpdateAsync(Assignment assignment);
     Task DeleteAsync(Assignment assignment);
     Task AddFileAsync(AssignmentFile file);
+    Task<int> CountTeamsAsync(Guid assignmentId);
     Task<(List<Assignment>, int)> GetByCourseAsync(
         Guid courseId,
         int page,
