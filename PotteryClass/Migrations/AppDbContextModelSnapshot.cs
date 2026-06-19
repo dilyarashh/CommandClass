@@ -249,6 +249,69 @@ namespace PotteryClass.Migrations
                     b.ToTable("PeerReviewAssignments");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.PeerReviewRating", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PeerReviewAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewedTeamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewerTeamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Score")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.HasIndex("PeerReviewAssignmentId");
+
+                    b.HasIndex("ReviewedTeamId");
+
+                    b.HasIndex("ReviewedUserId");
+
+                    b.HasIndex("ReviewerTeamId");
+
+                    b.HasIndex("ReviewerUserId");
+
+                    b.HasIndex("SubmissionId");
+
+                    b.HasIndex("PeerReviewAssignmentId", "ReviewerUserId", "SubmissionId")
+                        .IsUnique();
+
+                    b.ToTable("PeerReviewRatings");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.BlackToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -805,6 +868,65 @@ namespace PotteryClass.Migrations
                     b.Navigation("ReviewerTeam");
                 });
 
+            modelBuilder.Entity("PotteryClass.Data.Entities.PeerReviewRating", b =>
+                {
+                    b.HasOne("PotteryClass.Data.Entities.Assignment", "Assignment")
+                        .WithMany("PeerReviewRatings")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.PeerReviewAssignment", "PeerReviewAssignment")
+                        .WithMany()
+                        .HasForeignKey("PeerReviewAssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.AssignmentTeam", "ReviewedTeam")
+                        .WithMany()
+                        .HasForeignKey("ReviewedTeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", "ReviewedUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.AssignmentTeam", "ReviewerTeam")
+                        .WithMany()
+                        .HasForeignKey("ReviewerTeamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.User", "ReviewerUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PotteryClass.Data.Entities.Submission", "Submission")
+                        .WithMany()
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("PeerReviewAssignment");
+
+                    b.Navigation("ReviewedTeam");
+
+                    b.Navigation("ReviewedUser");
+
+                    b.Navigation("ReviewerTeam");
+
+                    b.Navigation("ReviewerUser");
+
+                    b.Navigation("Submission");
+                });
+
             modelBuilder.Entity("PotteryClass.Data.Entities.Submission", b =>
                 {
                     b.HasOne("PotteryClass.Data.Entities.Assignment", null)
@@ -869,6 +991,8 @@ namespace PotteryClass.Migrations
                     b.Navigation("Files");
 
                     b.Navigation("PeerReviewAssignments");
+
+                    b.Navigation("PeerReviewRatings");
 
                     b.Navigation("Submissions");
 

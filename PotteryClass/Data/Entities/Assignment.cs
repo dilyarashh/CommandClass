@@ -37,4 +37,5 @@ public class Assignment
     public ICollection<AssignmentTeam> Teams { get; set; } = new List<AssignmentTeam>();
     public ICollection<CriterionGroup> CriterionGroups { get; set; } = new List<CriterionGroup>();
     public ICollection<PeerReviewAssignment> PeerReviewAssignments { get; set; } = new List<PeerReviewAssignment>();
+    public ICollection<PeerReviewRating> PeerReviewRatings { get; set; } = new List<PeerReviewRating>();
 }

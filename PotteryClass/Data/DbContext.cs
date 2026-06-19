@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AssignmentTeam> AssignmentTeams { get; set; }
     public DbSet<AssignmentTeamMember> AssignmentTeamMembers { get; set; }
     public DbSet<PeerReviewAssignment> PeerReviewAssignments { get; set; }
+    public DbSet<PeerReviewRating> PeerReviewRatings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -331,6 +332,61 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(x => x.ReviewedTeam)
                 .WithMany()
                 .HasForeignKey(x => x.ReviewedTeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PeerReviewRating>(b =>
+        {
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Score)
+                .HasPrecision(7, 2)
+                .IsRequired();
+
+            b.Property(x => x.Comment).HasMaxLength(4000);
+            b.Property(x => x.CreatedAtUtc).IsRequired();
+            b.Property(x => x.UpdatedAtUtc).IsRequired();
+
+            b.HasIndex(x => x.AssignmentId);
+            b.HasIndex(x => x.PeerReviewAssignmentId);
+            b.HasIndex(x => x.ReviewerUserId);
+            b.HasIndex(x => x.ReviewedUserId);
+            b.HasIndex(x => x.SubmissionId);
+            b.HasIndex(x => new { x.PeerReviewAssignmentId, x.ReviewerUserId, x.SubmissionId }).IsUnique();
+
+            b.HasOne(x => x.Assignment)
+                .WithMany(x => x.PeerReviewRatings)
+                .HasForeignKey(x => x.AssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.PeerReviewAssignment)
+                .WithMany()
+                .HasForeignKey(x => x.PeerReviewAssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(x => x.ReviewerTeam)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewerTeamId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.ReviewedTeam)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewedTeamId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.ReviewerUser)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.ReviewedUser)
+                .WithMany()
+                .HasForeignKey(x => x.ReviewedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(x => x.Submission)
+                .WithMany()
+                .HasForeignKey(x => x.SubmissionId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

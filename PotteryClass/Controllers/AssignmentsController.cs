@@ -140,6 +140,20 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Сохранить оценки peer-review текущего студента
+    /// </summary>
+    [Authorize]
+    [HttpPut("{id}/peer-review/ratings")]
+    [ProducesResponseType(typeof(List<PeerReviewRatingDto>), 200)]
+    public async Task<ActionResult<List<PeerReviewRatingDto>>> UpdatePeerReviewRatings(
+        Guid id,
+        [FromBody] UpdatePeerReviewRatingsRequest dto)
+    {
+        var result = await service.UpdatePeerReviewRatingsAsync(id, dto);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Удалить задание
     /// </summary>
     [Authorize]
