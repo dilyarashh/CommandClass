@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using FluentValidation;
 using PotteryClass.Data.DTOs;
@@ -243,6 +244,47 @@ public class AssignmentService(
         if (teamCount > 0 && requiredReviewsCount.Value > teamCount - 1)
             throw new BadRequestException("Количество обязательных peer-review проверок не может быть больше количества других команд");
     }
+
+    private static DateTime ParsePeerReviewDeadlineUtc(UpdatePeerReviewDeadlineRequest? dto)
+    {
+        if (dto is null ||
+            dto.PeerReviewEndsAtUtc.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            throw InvalidPeerReviewDeadline("Дата окончания peer-review обязательна");
+        }
+
+        if (dto.PeerReviewEndsAtUtc.ValueKind != JsonValueKind.String)
+            throw InvalidPeerReviewDeadline("Дата окончания peer-review должна быть строкой в формате ISO 8601 с timezone");
+
+        var value = dto.PeerReviewEndsAtUtc.GetString();
+        if (string.IsNullOrWhiteSpace(value))
+            throw InvalidPeerReviewDeadline("Дата окончания peer-review обязательна");
+
+        var trimmed = value.Trim();
+        var hasTimeZone = trimmed.EndsWith("Z", StringComparison.OrdinalIgnoreCase) ||
+                          trimmed.Length >= 6 &&
+                          (trimmed[^6] == '+' || trimmed[^6] == '-') &&
+                          char.IsDigit(trimmed[^5]) &&
+                          char.IsDigit(trimmed[^4]) &&
+                          trimmed[^3] == ':' &&
+                          char.IsDigit(trimmed[^2]) &&
+                          char.IsDigit(trimmed[^1]);
+
+        if (!hasTimeZone ||
+            !DateTimeOffset.TryParse(
+                trimmed,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out var parsed))
+        {
+            throw InvalidPeerReviewDeadline("Дата окончания peer-review должна быть в формате ISO 8601 с timezone");
+        }
+
+        return parsed.UtcDateTime;
+    }
+
+    private static ApiException InvalidPeerReviewDeadline(string message)
+        => new(400, "PEER_REVIEW_DEADLINE_INVALID", message);
 
     private static PeerReviewAssignmentDto MapPeerReviewAssignment(PeerReviewAssignment assignment)
     {
@@ -929,6 +971,59 @@ public class AssignmentService(
         await _assignmentRepository.UpdateAsync(assignment);
 
         return Map(assignment);
+    }
+
+    public async Task<PeerReviewDeadlineDto> UpdatePeerReviewDeadlineAsync(
+        Guid id,
+        UpdatePeerReviewDeadlineRequest dto)
+    {
+        if (_currentUser.GetRole() != UserRole.Teacher)
+            throw new ApiException(403, "PEER_REVIEW_DEADLINE_ACCESS_DENIED", "Изменить дедлайн peer-review может только преподаватель");
+
+        var newDeadlineUtc = ParsePeerReviewDeadlineUtc(dto);
+        var nowUtc = DateTime.UtcNow;
+        if (newDeadlineUtc <= nowUtc)
+            throw InvalidPeerReviewDeadline("Дата окончания peer-review должна быть в будущем");
+
+        var teacherId = _currentUser.GetUserId();
+        var assignment = await _assignmentRepository.GetByIdAsync(id)
+            ?? throw new ApiException(404, "PEER_REVIEW_DEADLINE_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, teacherId);
+        if (!isTeacher)
+            throw new ApiException(404, "PEER_REVIEW_DEADLINE_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        if (!assignment.PeerReviewEnabled)
+        {
+            throw new ConflictException(
+                "PEER_REVIEW_DEADLINE_UPDATE_NOT_ALLOWED",
+                "Peer-review не включен для задания");
+        }
+
+        if (!assignment.PeerReviewStartsAtUtc.HasValue)
+        {
+            throw new ConflictException(
+                "PEER_REVIEW_DEADLINE_UPDATE_NOT_ALLOWED",
+                "Дата начала peer-review не задана");
+        }
+
+        if (newDeadlineUtc <= assignment.PeerReviewStartsAtUtc.Value)
+            throw InvalidPeerReviewDeadline("Дата окончания peer-review должна быть позже даты начала");
+
+        if (assignment.PeerReviewEndsAtUtc.HasValue &&
+            newDeadlineUtc <= assignment.PeerReviewEndsAtUtc.Value)
+        {
+            throw InvalidPeerReviewDeadline("Новый дедлайн peer-review должен быть позже текущего");
+        }
+
+        assignment.PeerReviewEndsAtUtc = newDeadlineUtc;
+        await _assignmentRepository.UpdateAsync(assignment);
+
+        return new PeerReviewDeadlineDto
+        {
+            AssignmentId = assignment.Id,
+            PeerReviewEndsAtUtc = assignment.PeerReviewEndsAtUtc.Value
+        };
     }
 
     public async Task<PeerReviewAssignmentResultDto> GetPeerReviewAssignmentsAsync(Guid assignmentId)

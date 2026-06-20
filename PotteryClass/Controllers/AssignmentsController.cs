@@ -104,6 +104,20 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Extend assignment peer-review deadline
+    /// </summary>
+    [Authorize]
+    [HttpPatch("{id}/peer-review/deadline")]
+    [ProducesResponseType(typeof(PeerReviewDeadlineDto), 200)]
+    public async Task<ActionResult<PeerReviewDeadlineDto>> UpdatePeerReviewDeadline(
+        Guid id,
+        [FromBody] UpdatePeerReviewDeadlineRequest dto)
+    {
+        var result = await service.UpdatePeerReviewDeadlineAsync(id, dto);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Получить назначения peer-review задания
     /// </summary>
     [Authorize]
