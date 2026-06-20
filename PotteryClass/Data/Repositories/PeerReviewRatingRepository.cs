@@ -21,6 +21,17 @@ public class PeerReviewRatingRepository(AppDbContext db) : IPeerReviewRatingRepo
                 peerReviewAssignmentIds.Contains(x.PeerReviewAssignmentId))
             .ToListAsync();
 
+    public Task<List<PeerReviewRating>> GetByReviewersAndAssignmentsAsync(
+        Guid assignmentId,
+        IReadOnlyCollection<Guid> reviewerUserIds,
+        IReadOnlyCollection<Guid> peerReviewAssignmentIds)
+        => db.PeerReviewRatings
+            .Where(x =>
+                x.AssignmentId == assignmentId &&
+                reviewerUserIds.Contains(x.ReviewerUserId) &&
+                peerReviewAssignmentIds.Contains(x.PeerReviewAssignmentId))
+            .ToListAsync();
+
     public async Task UpsertAsync(List<PeerReviewRating> ratings)
     {
         if (ratings.Count == 0)
