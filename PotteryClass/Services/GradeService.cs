@@ -14,6 +14,8 @@ public class GradeService(
     IAssignmentRepository assignmentRepo,
     ICriterionRepository criterionRepository,
     IAssignmentTeamRepository assignmentTeamRepository,
+    IPeerReviewAssignmentRepository peerReviewAssignmentRepository,
+    IPeerReviewRatingRepository peerReviewRatingRepository,
     ICourseRepository courseRepo,
     IGradeCalculationService gradeCalculationService,
     ICurrentUser currentUser)
@@ -88,6 +90,108 @@ public class GradeService(
         var student = course.Students.FirstOrDefault(s => s.UserId == studentId);
         if (student == null || student.IsBlocked)
             throw new ForbiddenException("Нет доступа");
+    }
+
+    private async Task<PeerReviewPenaltyInputDto> CalculatePeerReviewPenaltyAsync(
+        Data.Entities.Assignment assignment,
+        Guid studentId)
+    {
+        if (!assignment.PeerReviewEnabled ||
+            !assignment.PeerReviewEndsAtUtc.HasValue ||
+            !assignment.PeerReviewRequiredReviewsCount.HasValue ||
+            assignment.PeerReviewRequiredReviewsCount.Value <= 0 ||
+            assignment.PeerReviewPenaltyPercent <= 0)
+        {
+            return new PeerReviewPenaltyInputDto();
+        }
+
+        if (assignment.PeerReviewPenaltyPercent > 100)
+        {
+            throw new ConflictException(
+                "PEER_REVIEW_PENALTY_NOT_READY",
+                "Настройки штрафа peer-review не позволяют рассчитать оценку");
+        }
+
+        var nowUtc = DateTime.UtcNow;
+        if (nowUtc <= assignment.PeerReviewEndsAtUtc.Value)
+            return new PeerReviewPenaltyInputDto();
+
+        var reviewerTeam = await assignmentTeamRepository.GetStudentTeamAsync(assignment.Id, studentId);
+        if (reviewerTeam == null)
+            return new PeerReviewPenaltyInputDto();
+
+        var peerReviewAssignments = await peerReviewAssignmentRepository.GetByReviewerTeamAsync(
+            assignment.Id,
+            reviewerTeam.Id);
+
+        var requiredReviewsCount = assignment.PeerReviewRequiredReviewsCount.Value;
+        if (peerReviewAssignments.Count != requiredReviewsCount)
+        {
+            throw new ConflictException(
+                "PEER_REVIEW_PENALTY_NOT_READY",
+                "Назначения peer-review не позволяют рассчитать штраф",
+                new Dictionary<string, object>
+                {
+                    ["requiredReviewsCount"] = requiredReviewsCount,
+                    ["assignedReviewsCount"] = peerReviewAssignments.Count
+                });
+        }
+
+        var reviewedMemberIds = peerReviewAssignments
+            .SelectMany(x => x.ReviewedTeam.Members)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToList();
+
+        var reviewedSubmissions = reviewedMemberIds.Count == 0
+            ? []
+            : await submissionRepo.GetByAssignmentAndStudentsAsync(assignment.Id, reviewedMemberIds);
+
+        var reviewedSubmissionsByAssignmentId = peerReviewAssignments.ToDictionary(
+            x => x.Id,
+            x =>
+            {
+                var reviewedMemberIdsForAssignment = x.ReviewedTeam.Members
+                    .Select(m => m.UserId)
+                    .ToHashSet();
+
+                return reviewedSubmissions
+                    .Where(s => reviewedMemberIdsForAssignment.Contains(s.StudentId))
+                    .ToList();
+            });
+
+        var peerReviewAssignmentIds = peerReviewAssignments.Select(x => x.Id).ToList();
+        var ratings = await peerReviewRatingRepository.GetByReviewerAndAssignmentsAsync(
+            assignment.Id,
+            studentId,
+            peerReviewAssignmentIds);
+
+        var ratedKeys = ratings
+            .Select(x => (x.ReviewerUserId, x.PeerReviewAssignmentId, x.SubmissionId))
+            .ToHashSet();
+
+        var completedReviewsCount = PeerReviewProgressCalculator.CountCompletedPeerReviewAssignments(
+            studentId,
+            peerReviewAssignments,
+            reviewedSubmissionsByAssignmentId,
+            ratedKeys);
+
+        if (completedReviewsCount >= requiredReviewsCount)
+        {
+            return new PeerReviewPenaltyInputDto
+            {
+                RequiredReviewsCount = requiredReviewsCount,
+                CompletedReviewsCount = completedReviewsCount
+            };
+        }
+
+        return new PeerReviewPenaltyInputDto
+        {
+            ShouldApply = true,
+            Percent = assignment.PeerReviewPenaltyPercent,
+            RequiredReviewsCount = requiredReviewsCount,
+            CompletedReviewsCount = completedReviewsCount
+        };
     }
 
     private static SubmissionGradeDto MapGrade(Data.Entities.Submission submission)
@@ -359,12 +463,14 @@ public class GradeService(
         EnsureTeacherOrAdmin(course);
 
         var criteria = await criterionRepository.GetByAssignmentIdAsync(assignment.Id);
+        var peerReviewPenalty = await CalculatePeerReviewPenaltyAsync(assignment, submission.StudentId);
         var calculation = gradeCalculationService.Calculate(new GradeCalculationRequest
         {
             Rules = DeserializeGradingRules(assignment.GradingRules),
             Criteria = criteria.Select(MapCriterion).ToList(),
             Values = dto.Values,
-            Penalties = dto.Penalties
+            Penalties = dto.Penalties,
+            PeerReviewPenalty = peerReviewPenalty
         });
 
         var checkedByUserId = currentUser.GetUserId();
