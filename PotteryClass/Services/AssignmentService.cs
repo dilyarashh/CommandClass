@@ -1121,32 +1121,83 @@ public class AssignmentService(
         AssignmentTeam team,
         IReadOnlyDictionary<Guid, List<PeerReviewAssignment>> peerReviewAssignmentsByReviewerTeamId,
         IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
-        IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys)
+        IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys,
+        DateTime? peerReviewEndsAtUtc,
+        DateTime nowUtc)
     {
         peerReviewAssignmentsByReviewerTeamId.TryGetValue(team.Id, out var peerReviewAssignments);
         peerReviewAssignments ??= [];
 
-        var completedMembersCount = team.Members.Count(member =>
-        {
-            var completedCount = CountCompletedPeerReviewAssignments(
-                member.UserId,
+        var members = team.Members
+            .OrderBy(x => x.User.LastName)
+            .ThenBy(x => x.User.FirstName)
+            .ThenBy(x => x.User.MiddleName)
+            .ThenBy(x => x.UserId)
+            .Select(member => MapPeerReviewReportTeamMember(
+                member,
                 peerReviewAssignments,
                 reviewedSubmissionsByAssignmentId,
-                ratedKeys);
+                ratedKeys,
+                peerReviewEndsAtUtc,
+                nowUtc))
+            .ToList();
 
-            return peerReviewAssignments.Count > 0 &&
-                   completedCount == peerReviewAssignments.Count;
-        });
+        var completedMembersCount = members.Count(x => x.IsCompleted);
 
         return new PeerReviewReportTeamDto
         {
             TeamId = team.Id,
             TeamName = team.Name,
-            MembersCount = team.Members.Count,
+            MembersCount = members.Count,
             CompletedMembersCount = completedMembersCount,
-            RemainingMembersCount = team.Members.Count - completedMembersCount,
-            IsCompleted = team.Members.Count > 0 && completedMembersCount == team.Members.Count
+            RemainingMembersCount = members.Count - completedMembersCount,
+            IsCompleted = members.Count > 0 && completedMembersCount == members.Count,
+            Members = members
         };
+    }
+
+    private static PeerReviewReportTeamMemberDto MapPeerReviewReportTeamMember(
+        AssignmentTeamMember member,
+        IReadOnlyCollection<PeerReviewAssignment> peerReviewAssignments,
+        IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
+        IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys,
+        DateTime? peerReviewEndsAtUtc,
+        DateTime nowUtc)
+    {
+        var completedCount = CountCompletedPeerReviewAssignments(
+            member.UserId,
+            peerReviewAssignments,
+            reviewedSubmissionsByAssignmentId,
+            ratedKeys);
+
+        var isCompleted = peerReviewAssignments.Count > 0 &&
+                          completedCount == peerReviewAssignments.Count;
+
+        return new PeerReviewReportTeamMemberDto
+        {
+            UserId = member.UserId,
+            FirstName = member.User.FirstName,
+            LastName = member.User.LastName,
+            MiddleName = member.User.MiddleName,
+            TotalCount = peerReviewAssignments.Count,
+            CompletedCount = completedCount,
+            RemainingCount = peerReviewAssignments.Count - completedCount,
+            CompletionStatus = GetPeerReviewCompletionStatus(isCompleted, peerReviewEndsAtUtc, nowUtc),
+            IsCompleted = isCompleted
+        };
+    }
+
+    private static string GetPeerReviewCompletionStatus(
+        bool isCompleted,
+        DateTime? peerReviewEndsAtUtc,
+        DateTime nowUtc)
+    {
+        if (isCompleted)
+            return "completed";
+
+        return peerReviewEndsAtUtc.HasValue && nowUtc > peerReviewEndsAtUtc.Value
+            ? "not_completed"
+            : "in_progress";
     }
 
     public async Task<PeerReviewReportDto> GetPeerReviewReportAsync(Guid assignmentId)
@@ -1250,6 +1301,7 @@ public class AssignmentService(
             .Select(x => (x.ReviewerUserId, x.PeerReviewAssignmentId, x.SubmissionId))
             .ToHashSet();
 
+        var nowUtc = DateTime.UtcNow;
         var orderedTeams = teams
             .OrderBy(x => x.CreatedAtUtc)
             .ThenBy(x => x.Id)
@@ -1266,7 +1318,9 @@ public class AssignmentService(
                     team,
                     peerReviewAssignmentsByReviewerTeamId,
                     reviewedSubmissionsByAssignmentId,
-                    ratedKeys))
+                    ratedKeys,
+                    assignment.PeerReviewEndsAtUtc,
+                    nowUtc))
                 .ToList()
         };
     }
