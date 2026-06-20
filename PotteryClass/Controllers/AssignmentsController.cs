@@ -128,6 +128,18 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Get assignment peer-review report
+    /// </summary>
+    [Authorize]
+    [HttpGet("{id}/peer-review/report")]
+    [ProducesResponseType(typeof(PeerReviewReportDto), 200)]
+    public async Task<ActionResult<PeerReviewReportDto>> GetPeerReviewReport(Guid id)
+    {
+        var result = await service.GetPeerReviewReportAsync(id);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Получить форму peer-review текущего студента
     /// </summary>
     [Authorize]

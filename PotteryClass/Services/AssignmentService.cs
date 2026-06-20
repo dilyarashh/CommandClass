@@ -1117,6 +1117,160 @@ public class AssignmentService(
         };
     }
 
+    private static PeerReviewReportTeamDto MapPeerReviewReportTeam(
+        AssignmentTeam team,
+        IReadOnlyDictionary<Guid, List<PeerReviewAssignment>> peerReviewAssignmentsByReviewerTeamId,
+        IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
+        IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys)
+    {
+        peerReviewAssignmentsByReviewerTeamId.TryGetValue(team.Id, out var peerReviewAssignments);
+        peerReviewAssignments ??= [];
+
+        var completedMembersCount = team.Members.Count(member =>
+        {
+            var completedCount = CountCompletedPeerReviewAssignments(
+                member.UserId,
+                peerReviewAssignments,
+                reviewedSubmissionsByAssignmentId,
+                ratedKeys);
+
+            return peerReviewAssignments.Count > 0 &&
+                   completedCount == peerReviewAssignments.Count;
+        });
+
+        return new PeerReviewReportTeamDto
+        {
+            TeamId = team.Id,
+            TeamName = team.Name,
+            MembersCount = team.Members.Count,
+            CompletedMembersCount = completedMembersCount,
+            RemainingMembersCount = team.Members.Count - completedMembersCount,
+            IsCompleted = team.Members.Count > 0 && completedMembersCount == team.Members.Count
+        };
+    }
+
+    public async Task<PeerReviewReportDto> GetPeerReviewReportAsync(Guid assignmentId)
+    {
+        if (_currentUser.GetRole() != UserRole.Teacher)
+            throw new ApiException(403, "TEACHER_REPORT_ACCESS_DENIED", "Отчёт peer-review доступен только преподавателю");
+
+        var teacherId = _currentUser.GetUserId();
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new ApiException(404, "TEACHER_REPORT_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, teacherId);
+        if (!isTeacher)
+            throw new ApiException(404, "TEACHER_REPORT_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        if (!assignment.PeerReviewEnabled)
+            throw new ApiException(400, "TEACHER_REPORT_PEER_REVIEW_DISABLED", "Peer-review не включен для задания");
+
+        if (!assignment.PeerReviewRequiredReviewsCount.HasValue ||
+            assignment.PeerReviewRequiredReviewsCount.Value < 1)
+        {
+            throw new ConflictException(
+                "TEACHER_REPORT_NOT_READY",
+                "Настройки обязательного peer-review не позволяют сформировать отчёт");
+        }
+
+        var teams = await _assignmentTeamRepository.GetByAssignmentAsync(assignmentId);
+        var requiredReviewsCount = assignment.PeerReviewRequiredReviewsCount.Value;
+        if (teams.Count < 2 || requiredReviewsCount > teams.Count - 1)
+        {
+            throw new ConflictException(
+                "TEACHER_REPORT_NOT_READY",
+                "Настройки peer-review не соответствуют количеству команд");
+        }
+
+        var peerReviewAssignments = await _peerReviewAssignmentRepository.GetByAssignmentAsync(assignmentId);
+        var peerReviewAssignmentsByReviewerTeamId = peerReviewAssignments
+            .GroupBy(x => x.ReviewerTeamId)
+            .ToDictionary(x => x.Key, x => x.ToList());
+        var teamIds = teams.Select(x => x.Id).ToHashSet();
+
+        if (peerReviewAssignments.Any(x =>
+                !teamIds.Contains(x.ReviewerTeamId) ||
+                !teamIds.Contains(x.ReviewedTeamId)))
+        {
+            throw new ConflictException(
+                "TEACHER_REPORT_NOT_READY",
+                "Назначения peer-review не соответствуют командам задания");
+        }
+
+        var hasIncompleteAssignments = teams.Any(team =>
+            !peerReviewAssignmentsByReviewerTeamId.TryGetValue(team.Id, out var teamAssignments) ||
+            teamAssignments.Count != requiredReviewsCount);
+
+        if (hasIncompleteAssignments)
+        {
+            throw new ConflictException(
+                "TEACHER_REPORT_NOT_READY",
+                "Назначения peer-review ещё не сформированы для всех команд",
+                new Dictionary<string, object>
+                {
+                    ["requiredReviewsCount"] = requiredReviewsCount,
+                    ["teamsCount"] = teams.Count,
+                    ["assignmentsCount"] = peerReviewAssignments.Count
+                });
+        }
+
+        var teamsById = teams.ToDictionary(x => x.Id);
+        var allMemberIds = teams
+            .SelectMany(x => x.Members)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToList();
+
+        var submissions = allMemberIds.Count == 0
+            ? []
+            : await _submissionRepository.GetByAssignmentAndStudentsAsync(assignmentId, allMemberIds);
+
+        var reviewedSubmissionsByAssignmentId = peerReviewAssignments.ToDictionary(
+            x => x.Id,
+            x =>
+            {
+                var reviewedMemberIds = teamsById[x.ReviewedTeamId].Members
+                    .Select(m => m.UserId)
+                    .ToHashSet();
+
+                return submissions
+                    .Where(s => reviewedMemberIds.Contains(s.StudentId))
+                    .ToList();
+            });
+
+        var peerReviewAssignmentIds = peerReviewAssignments.Select(x => x.Id).ToList();
+        var ratings = allMemberIds.Count == 0 || peerReviewAssignmentIds.Count == 0
+            ? new List<PeerReviewRating>()
+            : await _peerReviewRatingRepository.GetByReviewersAndAssignmentsAsync(
+                assignmentId,
+                allMemberIds,
+                peerReviewAssignmentIds);
+
+        var ratedKeys = ratings
+            .Select(x => (x.ReviewerUserId, x.PeerReviewAssignmentId, x.SubmissionId))
+            .ToHashSet();
+
+        var orderedTeams = teams
+            .OrderBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.Id)
+            .ToList();
+
+        return new PeerReviewReportDto
+        {
+            AssignmentId = assignmentId,
+            PeerReviewStartsAtUtc = assignment.PeerReviewStartsAtUtc,
+            PeerReviewEndsAtUtc = assignment.PeerReviewEndsAtUtc,
+            TeamsCount = orderedTeams.Count,
+            Teams = orderedTeams
+                .Select(team => MapPeerReviewReportTeam(
+                    team,
+                    peerReviewAssignmentsByReviewerTeamId,
+                    reviewedSubmissionsByAssignmentId,
+                    ratedKeys))
+                .ToList()
+        };
+    }
+
     public async Task<PeerReviewPersonalStatusDto> GetMyPeerReviewPersonalStatusAsync(Guid assignmentId)
     {
         if (_currentUser.GetRole() != UserRole.Student)
