@@ -17,6 +17,11 @@ public class PeerReviewReportTeamDto
     public int CompletedMembersCount { get; set; }
     public int RemainingMembersCount { get; set; }
     public bool IsCompleted { get; set; }
+    public int RequiredRatingsCount { get; set; }
+    public int ReceivedRatingsCount { get; set; }
+    public int MissingRatingsCount { get; set; }
+    public bool HasCompletePeerReview { get; set; }
+    public bool HasMissingRatings { get; set; }
     public List<PeerReviewReportTeamMemberDto> Members { get; set; } = new();
 }
 
