@@ -1076,22 +1076,33 @@ public class AssignmentService(
         };
     }
 
+    private static int CountCompletedPeerReviewAssignments(
+        Guid reviewerUserId,
+        IReadOnlyCollection<PeerReviewAssignment> peerReviewAssignments,
+        IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
+        IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys)
+        => peerReviewAssignments.Count(peerReviewAssignment =>
+        {
+            var submissions = reviewedSubmissionsByAssignmentId[peerReviewAssignment.Id];
+
+            return submissions.Count > 0 &&
+                   submissions.All(submission => ratedKeys.Contains((
+                       reviewerUserId,
+                       peerReviewAssignment.Id,
+                       submission.Id)));
+        });
+
     private static PeerReviewTeamMemberStatusDto MapPeerReviewTeamMemberStatus(
         AssignmentTeamMember member,
         IReadOnlyCollection<PeerReviewAssignment> peerReviewAssignments,
         IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
         IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys)
     {
-        var completedCount = peerReviewAssignments.Count(peerReviewAssignment =>
-        {
-            var submissions = reviewedSubmissionsByAssignmentId[peerReviewAssignment.Id];
-
-            return submissions.Count > 0 &&
-                   submissions.All(submission => ratedKeys.Contains((
-                       member.UserId,
-                       peerReviewAssignment.Id,
-                       submission.Id)));
-        });
+        var completedCount = CountCompletedPeerReviewAssignments(
+            member.UserId,
+            peerReviewAssignments,
+            reviewedSubmissionsByAssignmentId,
+            ratedKeys);
 
         return new PeerReviewTeamMemberStatusDto
         {
@@ -1099,6 +1110,98 @@ public class AssignmentService(
             FirstName = member.User.FirstName,
             LastName = member.User.LastName,
             MiddleName = member.User.MiddleName,
+            TotalCount = peerReviewAssignments.Count,
+            CompletedCount = completedCount,
+            RemainingCount = peerReviewAssignments.Count - completedCount,
+            IsCompleted = peerReviewAssignments.Count > 0 && completedCount == peerReviewAssignments.Count
+        };
+    }
+
+    public async Task<PeerReviewPersonalStatusDto> GetMyPeerReviewPersonalStatusAsync(Guid assignmentId)
+    {
+        if (_currentUser.GetRole() != UserRole.Student)
+            throw new ApiException(403, "PERSONAL_STATUS_ACCESS_DENIED", "Статус peer-review доступен только студенту");
+
+        var userId = _currentUser.GetUserId();
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
+            ?? throw new ApiException(404, "PERSONAL_STATUS_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        var isStudent = await _studentRepository.IsStudentAsync(assignment.CourseId, userId);
+        if (!isStudent)
+            throw new ApiException(404, "PERSONAL_STATUS_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        if (!assignment.PeerReviewEnabled)
+            throw new ApiException(400, "PERSONAL_STATUS_PEER_REVIEW_DISABLED", "Peer-review не включен для задания");
+
+        if (!assignment.PeerReviewRequiredReviewsCount.HasValue ||
+            assignment.PeerReviewRequiredReviewsCount.Value < 1)
+        {
+            throw new ConflictException(
+                "PERSONAL_STATUS_NOT_READY",
+                "Настройки обязательного peer-review не позволяют вычислить статус");
+        }
+
+        var team = await _assignmentTeamRepository.GetStudentTeamAsync(assignmentId, userId)
+            ?? throw new ApiException(404, "PERSONAL_STATUS_RESOURCE_NOT_FOUND", "Ресурс не найден");
+
+        var peerReviewAssignments = await _peerReviewAssignmentRepository.GetByReviewerTeamAsync(
+            assignmentId,
+            team.Id);
+
+        if (peerReviewAssignments.Count != assignment.PeerReviewRequiredReviewsCount.Value)
+        {
+            throw new ConflictException(
+                "PERSONAL_STATUS_NOT_READY",
+                "Назначения peer-review еще не сформированы",
+                new Dictionary<string, object>
+                {
+                    ["requiredReviewsCount"] = assignment.PeerReviewRequiredReviewsCount.Value,
+                    ["assignedReviewsCount"] = peerReviewAssignments.Count
+                });
+        }
+
+        var reviewedMemberIds = peerReviewAssignments
+            .SelectMany(x => x.ReviewedTeam.Members)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToList();
+
+        var reviewedSubmissions = reviewedMemberIds.Count == 0
+            ? []
+            : await _submissionRepository.GetByAssignmentAndStudentsAsync(assignmentId, reviewedMemberIds);
+
+        var reviewedSubmissionsByAssignmentId = peerReviewAssignments.ToDictionary(
+            x => x.Id,
+            x =>
+            {
+                var reviewedMemberIdsForAssignment = x.ReviewedTeam.Members
+                    .Select(m => m.UserId)
+                    .ToHashSet();
+
+                return reviewedSubmissions
+                    .Where(s => reviewedMemberIdsForAssignment.Contains(s.StudentId))
+                    .ToList();
+            });
+
+        var peerReviewAssignmentIds = peerReviewAssignments.Select(x => x.Id).ToList();
+        var ratings = await _peerReviewRatingRepository.GetByReviewerAndAssignmentsAsync(
+            assignmentId,
+            userId,
+            peerReviewAssignmentIds);
+
+        var ratedKeys = ratings
+            .Select(x => (x.ReviewerUserId, x.PeerReviewAssignmentId, x.SubmissionId))
+            .ToHashSet();
+
+        var completedCount = CountCompletedPeerReviewAssignments(
+            userId,
+            peerReviewAssignments,
+            reviewedSubmissionsByAssignmentId,
+            ratedKeys);
+
+        return new PeerReviewPersonalStatusDto
+        {
+            AssignmentId = assignmentId,
             TotalCount = peerReviewAssignments.Count,
             CompletedCount = completedCount,
             RemainingCount = peerReviewAssignments.Count - completedCount,
