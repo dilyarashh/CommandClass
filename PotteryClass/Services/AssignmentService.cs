@@ -1176,16 +1176,11 @@ public class AssignmentService(
         IReadOnlyCollection<PeerReviewAssignment> peerReviewAssignments,
         IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
         IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys)
-        => peerReviewAssignments.Count(peerReviewAssignment =>
-        {
-            var submissions = reviewedSubmissionsByAssignmentId[peerReviewAssignment.Id];
-
-            return submissions.Count > 0 &&
-                   submissions.All(submission => ratedKeys.Contains((
-                       reviewerUserId,
-                       peerReviewAssignment.Id,
-                       submission.Id)));
-        });
+        => PeerReviewProgressCalculator.CountCompletedPeerReviewAssignments(
+            reviewerUserId,
+            peerReviewAssignments,
+            reviewedSubmissionsByAssignmentId,
+            ratedKeys);
 
     private static PeerReviewTeamMemberStatusDto MapPeerReviewTeamMemberStatus(
         AssignmentTeamMember member,

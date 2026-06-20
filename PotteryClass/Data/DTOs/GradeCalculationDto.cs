@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PotteryClass.Data.DTOs;
 
@@ -8,6 +9,7 @@ public class GradeCalculationRequest
     public List<CriterionDto> Criteria { get; set; } = new();
     public List<CriterionValueDto> Values { get; set; } = new();
     public GradePenaltyInputDto Penalties { get; set; } = new();
+    public PeerReviewPenaltyInputDto PeerReviewPenalty { get; set; } = new();
 }
 
 public class CriterionValueDto
@@ -21,6 +23,14 @@ public class GradePenaltyInputDto
     public bool Deadline { get; set; }
     public bool Progress { get; set; }
     public bool RequiredCriteria { get; set; }
+}
+
+public class PeerReviewPenaltyInputDto
+{
+    public bool ShouldApply { get; set; }
+    public decimal Percent { get; set; }
+    public int RequiredReviewsCount { get; set; }
+    public int CompletedReviewsCount { get; set; }
 }
 
 public class GradeCalculationResultDto
@@ -53,6 +63,12 @@ public class AppliedPenaltyDetailDto
     public string Source { get; set; } = null!;
     public decimal Value { get; set; }
     public string Kind { get; set; } = "points";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public decimal? Percent { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? RequiredReviewsCount { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? CompletedReviewsCount { get; set; }
 }
 
 public class AppliedMultiplierDetailDto

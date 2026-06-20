@@ -67,6 +67,7 @@ public class GradeCalculationService : IGradeCalculationService
         }
 
         ApplyRulePenalties(request, result);
+        ApplyPeerReviewPenalty(request.PeerReviewPenalty, result);
         ApplyMainThreshold(request.Rules, request.Criteria, result);
 
         var mode = Normalize(request.Rules.Mode);
@@ -175,6 +176,31 @@ public class GradeCalculationService : IGradeCalculationService
         result.AppliedMultipliers.Add(new AppliedMultiplierDetailDto
         {
             Source = source,
+            Value = multiplier
+        });
+    }
+
+    private static void ApplyPeerReviewPenalty(
+        PeerReviewPenaltyInputDto penalty,
+        GradeCalculationResultDto result)
+    {
+        if (!penalty.ShouldApply || penalty.Percent <= 0)
+            return;
+
+        var multiplier = Math.Max(0m, 1m - penalty.Percent / 100m);
+        result.Multiplier *= multiplier;
+        result.AppliedPenalties.Add(new AppliedPenaltyDetailDto
+        {
+            Source = "peer_review",
+            Value = penalty.Percent,
+            Kind = "percentage",
+            Percent = penalty.Percent,
+            RequiredReviewsCount = penalty.RequiredReviewsCount,
+            CompletedReviewsCount = penalty.CompletedReviewsCount
+        });
+        result.AppliedMultipliers.Add(new AppliedMultiplierDetailDto
+        {
+            Source = "peer_review",
             Value = multiplier
         });
     }
