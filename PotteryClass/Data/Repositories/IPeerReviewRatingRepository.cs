@@ -9,5 +9,9 @@ public interface IPeerReviewRatingRepository
         Guid assignmentId,
         Guid reviewerUserId,
         IReadOnlyCollection<Guid> peerReviewAssignmentIds);
+    Task<List<PeerReviewRating>> GetByReviewersAndAssignmentsAsync(
+        Guid assignmentId,
+        IReadOnlyCollection<Guid> reviewerUserIds,
+        IReadOnlyCollection<Guid> peerReviewAssignmentIds);
     Task UpsertAsync(List<PeerReviewRating> ratings);
 }

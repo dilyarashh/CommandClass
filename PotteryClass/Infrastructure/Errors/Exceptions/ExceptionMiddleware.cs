@@ -19,6 +19,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
     {
         var response = exception switch
         {
+            ApiException apiEx => CreateResponse(apiEx.Status, apiEx.Message, apiEx.Code, apiEx.Details),
             NotFoundException => CreateResponse(404, exception.Message),
             ForbiddenException => CreateResponse(403, exception.Message),
             UnauthorizedException => CreateResponse(401, exception.Message),
@@ -38,10 +39,17 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         return context.Response.WriteAsJsonAsync(response);
     }
 
-    private static ErrorResponse CreateResponse(int status, string message)
+    private static ErrorResponse CreateResponse(
+        int status,
+        string message,
+        string? code = null,
+        Dictionary<string, object>? details = null)
         => new()
         {
             Title = message,
-            Status = status
+            Status = status,
+            Code = code,
+            Message = code is null ? null : message,
+            Details = details
         };
 }

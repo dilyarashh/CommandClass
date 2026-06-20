@@ -140,6 +140,18 @@ public class AssignmentsController(IAssignmentService service) : ControllerBase
     }
 
     /// <summary>
+    /// Get current student's team peer-review status
+    /// </summary>
+    [Authorize]
+    [HttpGet("{id}/peer-review/team-status")]
+    [ProducesResponseType(typeof(PeerReviewTeamStatusDto), 200)]
+    public async Task<ActionResult<PeerReviewTeamStatusDto>> GetMyPeerReviewTeamStatus(Guid id)
+    {
+        var result = await service.GetMyPeerReviewTeamStatusAsync(id);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Сохранить оценки peer-review текущего студента
     /// </summary>
     [Authorize]
