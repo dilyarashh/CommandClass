@@ -17,4 +17,18 @@ public class PeerReviewReportTeamDto
     public int CompletedMembersCount { get; set; }
     public int RemainingMembersCount { get; set; }
     public bool IsCompleted { get; set; }
+    public List<PeerReviewReportTeamMemberDto> Members { get; set; } = new();
+}
+
+public class PeerReviewReportTeamMemberDto
+{
+    public Guid UserId { get; set; }
+    public string FirstName { get; set; } = null!;
+    public string LastName { get; set; } = null!;
+    public string? MiddleName { get; set; }
+    public int TotalCount { get; set; }
+    public int CompletedCount { get; set; }
+    public int RemainingCount { get; set; }
+    public string CompletionStatus { get; set; } = null!;
+    public bool IsCompleted { get; set; }
 }
