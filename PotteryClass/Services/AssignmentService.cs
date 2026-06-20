@@ -1120,6 +1120,8 @@ public class AssignmentService(
     private static PeerReviewReportTeamDto MapPeerReviewReportTeam(
         AssignmentTeam team,
         IReadOnlyDictionary<Guid, List<PeerReviewAssignment>> peerReviewAssignmentsByReviewerTeamId,
+        IReadOnlyDictionary<Guid, List<PeerReviewAssignment>> peerReviewAssignmentsByReviewedTeamId,
+        IReadOnlyDictionary<Guid, AssignmentTeam> teamsById,
         IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
         IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys,
         DateTime? peerReviewEndsAtUtc,
@@ -1143,6 +1145,12 @@ public class AssignmentService(
             .ToList();
 
         var completedMembersCount = members.Count(x => x.IsCompleted);
+        var ratingCoverage = GetPeerReviewRatingCoverage(
+            team.Id,
+            peerReviewAssignmentsByReviewedTeamId,
+            teamsById,
+            reviewedSubmissionsByAssignmentId,
+            ratedKeys);
 
         return new PeerReviewReportTeamDto
         {
@@ -1152,9 +1160,58 @@ public class AssignmentService(
             CompletedMembersCount = completedMembersCount,
             RemainingMembersCount = members.Count - completedMembersCount,
             IsCompleted = members.Count > 0 && completedMembersCount == members.Count,
+            RequiredRatingsCount = ratingCoverage.RequiredRatingsCount,
+            ReceivedRatingsCount = ratingCoverage.ReceivedRatingsCount,
+            MissingRatingsCount = ratingCoverage.MissingRatingsCount,
+            HasCompletePeerReview = ratingCoverage.HasCompletePeerReview,
+            HasMissingRatings = ratingCoverage.HasMissingRatings,
             Members = members
         };
     }
+
+    private static PeerReviewRatingCoverage GetPeerReviewRatingCoverage(
+        Guid reviewedTeamId,
+        IReadOnlyDictionary<Guid, List<PeerReviewAssignment>> peerReviewAssignmentsByReviewedTeamId,
+        IReadOnlyDictionary<Guid, AssignmentTeam> teamsById,
+        IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
+        IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys)
+    {
+        peerReviewAssignmentsByReviewedTeamId.TryGetValue(reviewedTeamId, out var peerReviewAssignments);
+        peerReviewAssignments ??= [];
+
+        var requiredKeys = peerReviewAssignments
+            .SelectMany(peerReviewAssignment =>
+            {
+                var reviewerMemberIds = teamsById[peerReviewAssignment.ReviewerTeamId].Members
+                    .Select(m => m.UserId);
+                var submissions = reviewedSubmissionsByAssignmentId[peerReviewAssignment.Id];
+
+                return reviewerMemberIds.SelectMany(reviewerUserId =>
+                    submissions.Select(submission => (
+                        ReviewerUserId: reviewerUserId,
+                        PeerReviewAssignmentId: peerReviewAssignment.Id,
+                        SubmissionId: submission.Id)));
+            })
+            .ToHashSet();
+
+        var requiredRatingsCount = requiredKeys.Count;
+        var receivedRatingsCount = requiredKeys.Count(ratedKeys.Contains);
+        var missingRatingsCount = Math.Max(requiredRatingsCount - receivedRatingsCount, 0);
+
+        return new PeerReviewRatingCoverage(
+            requiredRatingsCount,
+            receivedRatingsCount,
+            missingRatingsCount,
+            requiredRatingsCount > 0 && missingRatingsCount == 0,
+            missingRatingsCount > 0);
+    }
+
+    private sealed record PeerReviewRatingCoverage(
+        int RequiredRatingsCount,
+        int ReceivedRatingsCount,
+        int MissingRatingsCount,
+        bool HasCompletePeerReview,
+        bool HasMissingRatings);
 
     private static PeerReviewReportTeamMemberDto MapPeerReviewReportTeamMember(
         AssignmentTeamMember member,
@@ -1237,6 +1294,9 @@ public class AssignmentService(
         var peerReviewAssignmentsByReviewerTeamId = peerReviewAssignments
             .GroupBy(x => x.ReviewerTeamId)
             .ToDictionary(x => x.Key, x => x.ToList());
+        var peerReviewAssignmentsByReviewedTeamId = peerReviewAssignments
+            .GroupBy(x => x.ReviewedTeamId)
+            .ToDictionary(x => x.Key, x => x.ToList());
         var teamIds = teams.Select(x => x.Id).ToHashSet();
 
         if (peerReviewAssignments.Any(x =>
@@ -1317,6 +1377,8 @@ public class AssignmentService(
                 .Select(team => MapPeerReviewReportTeam(
                     team,
                     peerReviewAssignmentsByReviewerTeamId,
+                    peerReviewAssignmentsByReviewedTeamId,
+                    teamsById,
                     reviewedSubmissionsByAssignmentId,
                     ratedKeys,
                     assignment.PeerReviewEndsAtUtc,
