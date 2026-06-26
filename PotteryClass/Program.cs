@@ -22,14 +22,20 @@ var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? [];
 
+if (builder.Environment.IsDevelopment() && allowedOrigins.Length == 0)
+{
+    // Development fallback only. Production origins must be configured explicitly.
+    allowedOrigins = ["http://localhost:4200"];
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
         policy
             .WithOrigins(allowedOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+            .WithHeaders("Content-Type", "Authorization");
     });
 });
 
@@ -204,12 +210,12 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseCors("FrontendPolicy");
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthentication();
 app.UseMiddleware<BlacklistTokenMiddleware>();
 app.UseAuthorization();
 
-app.UseMiddleware<ExceptionMiddleware>();
 app.MapControllers();
 
 app.Run();

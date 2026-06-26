@@ -12,26 +12,67 @@ namespace PotteryClass.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(AppDbContext db, AuthService authService) : ControllerBase
+public class AuthController(
+    AppDbContext db,
+    AuthService authService,
+    ILogger<AuthController> logger) : ControllerBase
 {
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var user = await db.Users.FirstOrDefaultAsync(x => x.Email == request.Email);
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Password))
+        {
+            throw new BadRequestException("Email and password are required");
+        }
+
+        var user = await db.Users
+            .Where(x => x.Email == request.Email)
+            .Select(x => new
+            {
+                x.Id,
+                x.Email,
+                x.PasswordHash,
+                x.Role
+            })
+            .FirstOrDefaultAsync();
+
         if (user == null)
         {
-            throw new BadRequestException("Пользователь с такой почтой не зарегистрирован");
+            throw new UnauthorizedException("Invalid email or password");
         }
 
         var hasher = new PasswordHasher<User>();
-        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-        
+        var userForPasswordCheck = new User
+        {
+            Id = user.Id,
+            Email = user.Email,
+            PasswordHash = user.PasswordHash,
+            Role = user.Role,
+            FirstName = string.Empty,
+            LastName = string.Empty,
+            MiddleName = string.Empty
+        };
+
+        PasswordVerificationResult result;
+
+        try
+        {
+            result = hasher.VerifyHashedPassword(userForPasswordCheck, user.PasswordHash, request.Password);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to verify password hash for user {UserId}", user.Id);
+            throw new UnauthorizedException("Invalid email or password");
+        }
+
         if (result != PasswordVerificationResult.Success)
         {
-            throw new BadRequestException("Неверный пароль");
+            throw new UnauthorizedException("Invalid email or password");
         }
-        
-        var token = authService.GenerateToken(user);
+
+        var token = authService.GenerateToken(userForPasswordCheck);
         return Ok(new { token });
     }
 
@@ -43,7 +84,7 @@ public class AuthController(AppDbContext db, AuthService authService) : Controll
         var token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
         if (string.IsNullOrEmpty(token))
         {
-            throw new BadRequestException("Пользователь не был авторизован");
+            throw new BadRequestException("User is not authorized");
         }
 
         await db.BlackTokens.AddAsync(new BlackToken
