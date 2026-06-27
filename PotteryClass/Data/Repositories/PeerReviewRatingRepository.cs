@@ -26,6 +26,11 @@ public class PeerReviewRatingRepository(AppDbContext db) : IPeerReviewRatingRepo
         IReadOnlyCollection<Guid> reviewerUserIds,
         IReadOnlyCollection<Guid> peerReviewAssignmentIds)
         => db.PeerReviewRatings
+            .Include(x => x.ReviewerTeam)
+            .Include(x => x.ReviewedTeam)
+            .Include(x => x.ReviewerUser)
+            .Include(x => x.ReviewedUser)
+            .Include(x => x.Submission)
             .Where(x =>
                 x.AssignmentId == assignmentId &&
                 reviewerUserIds.Contains(x.ReviewerUserId) &&

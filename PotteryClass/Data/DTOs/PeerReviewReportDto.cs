@@ -23,6 +23,7 @@ public class PeerReviewReportTeamDto
     public bool HasCompletePeerReview { get; set; }
     public bool HasMissingRatings { get; set; }
     public List<PeerReviewReportTeamMemberDto> Members { get; set; } = new();
+    public List<PeerReviewReportRatingDto> Ratings { get; set; } = new();
 }
 
 public class PeerReviewReportTeamMemberDto
@@ -36,4 +37,27 @@ public class PeerReviewReportTeamMemberDto
     public int RemainingCount { get; set; }
     public string CompletionStatus { get; set; } = null!;
     public bool IsCompleted { get; set; }
+}
+
+public class PeerReviewReportRatingDto
+{
+    public Guid Id { get; set; }
+    public Guid PeerReviewAssignmentId { get; set; }
+    public Guid SubmissionId { get; set; }
+    public Guid ReviewerTeamId { get; set; }
+    public string ReviewerTeamName { get; set; } = null!;
+    public Guid ReviewedTeamId { get; set; }
+    public string ReviewedTeamName { get; set; } = null!;
+    public Guid ReviewerUserId { get; set; }
+    public string ReviewerFirstName { get; set; } = null!;
+    public string ReviewerLastName { get; set; } = null!;
+    public string? ReviewerMiddleName { get; set; }
+    public Guid ReviewedUserId { get; set; }
+    public string ReviewedFirstName { get; set; } = null!;
+    public string ReviewedLastName { get; set; } = null!;
+    public string? ReviewedMiddleName { get; set; }
+    public decimal Score { get; set; }
+    public string? Comment { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
 }

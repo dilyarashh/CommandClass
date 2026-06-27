@@ -1213,6 +1213,7 @@ public class AssignmentService(
         IReadOnlyDictionary<Guid, List<PeerReviewAssignment>> peerReviewAssignmentsByReviewedTeamId,
         IReadOnlyDictionary<Guid, AssignmentTeam> teamsById,
         IReadOnlyDictionary<Guid, List<Submission>> reviewedSubmissionsByAssignmentId,
+        IReadOnlyCollection<PeerReviewRating> ratings,
         IReadOnlySet<(Guid ReviewerUserId, Guid PeerReviewAssignmentId, Guid SubmissionId)> ratedKeys,
         DateTime? peerReviewEndsAtUtc,
         DateTime nowUtc)
@@ -1255,7 +1256,41 @@ public class AssignmentService(
             MissingRatingsCount = ratingCoverage.MissingRatingsCount,
             HasCompletePeerReview = ratingCoverage.HasCompletePeerReview,
             HasMissingRatings = ratingCoverage.HasMissingRatings,
-            Members = members
+            Members = members,
+            Ratings = ratings
+                .Where(x => x.ReviewedTeamId == team.Id)
+                .OrderBy(x => x.ReviewerTeam.CreatedAtUtc)
+                .ThenBy(x => x.ReviewerUser.LastName)
+                .ThenBy(x => x.ReviewerUser.FirstName)
+                .ThenBy(x => x.CreatedAtUtc)
+                .Select(MapPeerReviewReportRating)
+                .ToList()
+        };
+    }
+
+    private static PeerReviewReportRatingDto MapPeerReviewReportRating(PeerReviewRating rating)
+    {
+        return new PeerReviewReportRatingDto
+        {
+            Id = rating.Id,
+            PeerReviewAssignmentId = rating.PeerReviewAssignmentId,
+            SubmissionId = rating.SubmissionId,
+            ReviewerTeamId = rating.ReviewerTeamId,
+            ReviewerTeamName = rating.ReviewerTeam.Name,
+            ReviewedTeamId = rating.ReviewedTeamId,
+            ReviewedTeamName = rating.ReviewedTeam.Name,
+            ReviewerUserId = rating.ReviewerUserId,
+            ReviewerFirstName = rating.ReviewerUser.FirstName,
+            ReviewerLastName = rating.ReviewerUser.LastName,
+            ReviewerMiddleName = rating.ReviewerUser.MiddleName,
+            ReviewedUserId = rating.ReviewedUserId,
+            ReviewedFirstName = rating.ReviewedUser.FirstName,
+            ReviewedLastName = rating.ReviewedUser.LastName,
+            ReviewedMiddleName = rating.ReviewedUser.MiddleName,
+            Score = rating.Score,
+            Comment = rating.Comment,
+            CreatedAtUtc = rating.CreatedAtUtc,
+            UpdatedAtUtc = rating.UpdatedAtUtc
         };
     }
 
@@ -1474,6 +1509,7 @@ public class AssignmentService(
                     peerReviewAssignmentsByReviewedTeamId,
                     teamsById,
                     reviewedSubmissionsByAssignmentId,
+                    ratings,
                     ratedKeys,
                     assignment.PeerReviewEndsAtUtc,
                     nowUtc))
