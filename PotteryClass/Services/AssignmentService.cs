@@ -1349,16 +1349,20 @@ public class AssignmentService(
 
     public async Task<PeerReviewReportDto> GetPeerReviewReportAsync(Guid assignmentId)
     {
-        if (_currentUser.GetRole() != UserRole.Teacher)
+        var role = _currentUser.GetRole();
+        if (role != UserRole.Teacher && role != UserRole.Admin)
             throw new ApiException(403, "TEACHER_REPORT_ACCESS_DENIED", "Отчёт peer-review доступен только преподавателю");
 
-        var teacherId = _currentUser.GetUserId();
         var assignment = await _assignmentRepository.GetByIdAsync(assignmentId)
             ?? throw new ApiException(404, "TEACHER_REPORT_RESOURCE_NOT_FOUND", "Ресурс не найден");
 
-        var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, teacherId);
-        if (!isTeacher)
-            throw new ApiException(404, "TEACHER_REPORT_RESOURCE_NOT_FOUND", "Ресурс не найден");
+        if (role == UserRole.Teacher)
+        {
+            var teacherId = _currentUser.GetUserId();
+            var isTeacher = await _teacherRepository.IsTeacherAsync(assignment.CourseId, teacherId);
+            if (!isTeacher)
+                throw new ApiException(404, "TEACHER_REPORT_RESOURCE_NOT_FOUND", "Ресурс не найден");
+        }
 
         if (!assignment.PeerReviewEnabled)
             throw new ApiException(400, "TEACHER_REPORT_PEER_REVIEW_DISABLED", "Peer-review не включен для задания");
